@@ -2,9 +2,13 @@
 
 `meteor-client-bundler` is a module bundler which will take a bunch of Atmosphere package and put them into a single module, so we can load Meteor's client scripts regardless of what framework we're using to run our server. This project was originally created due to [Ionic2CLI-Meteor-Whatsapp](https://github.com/Urigo/Ionic2CLI-Meteor-WhatsApp) and the urge to combine both Ionic along with Meteor, so we can enjoy Ionic's great client and Meteor's powerful DDP client.
 
-### API
+## Install
 
-#### Bundling
+    $ npm install @whtsky/meteor-client-bundler
+
+## Usage
+
+### Cli
 
     $ meteor-client bundle
 
@@ -17,13 +21,20 @@
 - **--packs-dir [packages-dir]** - Export `METEOR_PACKAGE_DIRS`. Defaults to the `packages` directory under the root directory of the project. For more information, see [reference](https://docs.meteor.com/environment-variables.html#METEOR-PACKAGE-DIRS).
 - **-r, --release [meteor-release]** - Use a specific release of Meteor. Defaults to the globally installed release or the one used in the specified source directory.
 
-### Example
+### API
 
-#### Command
+```js
+import { bundle } from '@whtsky/meteor-client-bundler'
+// TBD
+```
+
+## Example
+
+### Command
 
     $ meteor-client bundle --destination meteor.bundle.js --config bundler.config.json
 
-#### Config
+### Config
 
 ```json
 {
@@ -33,10 +44,9 @@
   },
   "import": [
     "accounts-base",
-    "mys:accounts-phone",
-    "jalik:ufs@0.7.1_1",
-    "jalik:ufs-gridfs@0.1.4"
-  ]
+    "aldeed:collection2-core@=2.0.0"
+  ],
+  "npmPackages": ["simpl-schema@^0.3.2"]
 }
 ```
 

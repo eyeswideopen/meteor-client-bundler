@@ -2,11 +2,12 @@
   "name": "@whtsky/meteor-client-bundler",
   "version": "0.3.0",
   "description": "Bundles Meteor client-packages into a single module",
-  "author": "Eytan Manor",
+  "author": "Wu Haotian",
   "repository": {
     "type": "git",
     "url": "https://github.com/whtsky/meteor-client-bundler.git"
   },
+  "main": "lib/bundler.js",
   "bin": {
     "meteor-client": "cli"
   },
