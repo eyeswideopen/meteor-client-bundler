@@ -2677,8 +2677,8 @@ __meteor_runtime_config__ = {
           '>': '&gt;', // 1111
           '"': '&quot;', // 1112
           "'": '&#x27;' // 1113
-        } // 1114
-      }; // 1115
+          // 1114
+        } }; // 1115
       entityMap.unescape = _.invert(entityMap.escape); // 1116
       // 1117
       // Regexes containing the keys and values listed immediately above.                                    // 1118
@@ -3741,8 +3741,8 @@ __meteor_runtime_config__ = {
               meteorInstall({ // 22
                 node_modules: { // 23
                   meteor: meteorDir // 24
-                } // 25
-              }); // 26
+                  // 25
+                } }); // 26
             } // 27
             // 28
             // This file will be modified during computeJsOutputFilesMap to include                                                // 29
@@ -3767,24 +3767,25 @@ __meteor_runtime_config__ = {
             install("tracker"); // 48
             install("retry"); // 49
             install("id-map"); // 50
-            install("ddp-common"); // 51
-            install("reload"); // 52
-            install("diff-sequence"); // 53
-            install("mongo-id"); // 54
-            install("ddp-client", "meteor/ddp-client/namespace.js"); // 55
-            install("ddp"); // 56
-            install("ddp-server"); // 57
-            install("livedata"); // 58
-            install("dynamic-import", "meteor/dynamic-import/client.js"); // 59
-            install("hot-code-push"); // 60
-            install("geojson-utils", "meteor/geojson-utils/main.js"); // 61
-            install("ordered-dict"); // 62
-            install("minimongo", "meteor/minimongo/minimongo_client.js"); // 63
-            install("allow-deny"); // 64
-            install("mongo-dev-server"); // 65
-            install("mongo"); // 66
-            install("autoupdate"); // 67
-            // 68
+            install("callback-hook"); // 51
+            install("ddp-common"); // 52
+            install("reload"); // 53
+            install("diff-sequence"); // 54
+            install("mongo-id"); // 55
+            install("ddp-client", "meteor/ddp-client/namespace.js"); // 56
+            install("ddp"); // 57
+            install("ddp-server"); // 58
+            install("livedata"); // 59
+            install("dynamic-import", "meteor/dynamic-import/client.js"); // 60
+            install("hot-code-push"); // 61
+            install("geojson-utils", "meteor/geojson-utils/main.js"); // 62
+            install("ordered-dict"); // 63
+            install("minimongo", "meteor/minimongo/minimongo_client.js"); // 64
+            install("allow-deny"); // 65
+            install("mongo-dev-server"); // 66
+            install("mongo"); // 67
+            install("autoupdate"); // 68
+            // 69
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
           }, "process.js": function (_require5, _exports5, _module3) {
 
@@ -3818,8 +3819,8 @@ __meteor_runtime_config__ = {
                     // 17
                     _module4.exports = proc; // 18
                   } // 19
-                } // 20
-              }); // 21
+                  // 20
+                } }); // 21
             } else {
               // 22
               proc.platform = "browser"; // 23
@@ -4737,8 +4738,8 @@ __meteor_runtime_config__ = {
               // available to apps and packages.                                                                                 // 21
               "..": { // 22
                 node_modules: meteorAliases // 23
-              } // 24
-            }); // 25
+                // 24
+              } }); // 25
           } // 26
           // 27
           /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -5633,8 +5634,8 @@ __meteor_runtime_config__ = {
                   enumerable: false, // 27
                   writable: true, // 28
                   configurable: true // 29
-                } // 30
-              }); // 31
+                  // 30
+                } }); // 31
               if (superClass) _setPrototypeOf2.default ? (0, _setPrototypeOf2.default)(subClass, superClass) : subClass.__proto__ = superClass;
             }; // 33
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -15363,7 +15364,7 @@ __meteor_runtime_config__ = {
 
                 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                 //                                                                                                                  //
-                // ../../.0.9.0.16wg4z0++os+web.browser+web.cordova/npm/node_modules/meteor-promise/package.json                    //
+                // ../../.0.9.0.fbi9ll++os+web.browser+web.cordova/npm/node_modules/meteor-promise/package.json                     //
                 //                                                                                                                  //
                 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                 //
@@ -16006,7 +16007,7 @@ __meteor_runtime_config__ = {
 
                 ////////////////////////////////////////////////////////////////////////////////
                 //                                                                            //
-                // ../../.1.0.1.jgdus0++os+web.browser+web.cordova/npm/node_modules/meteor-ba //
+                // ../../.1.0.1.3e7kou++os+web.browser+web.cordova/npm/node_modules/meteor-ba //
                 //                                                                            //
                 ////////////////////////////////////////////////////////////////////////////////
                 //
@@ -19599,6 +19600,205 @@ __meteor_runtime_config__ = {
   var Meteor = Package.meteor.Meteor;
   var global = Package.meteor.global;
   var meteorEnv = Package.meteor.meteorEnv;
+  var _ = Package.underscore._;
+
+  /* Package-scope variables */
+  var Hook;
+
+  (function () {
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    //                                                                                //
+    // packages/callback-hook/hook.js                                                 //
+    //                                                                                //
+    ////////////////////////////////////////////////////////////////////////////////////
+    //
+    // XXX This pattern is under development. Do not add more callsites               // 1
+    // using this package for now. See:                                               // 2
+    // https://meteor.hackpad.com/Design-proposal-Hooks-YxvgEW06q6f                   // 3
+    //                                                                                // 4
+    // Encapsulates the pattern of registering callbacks on a hook.                   // 5
+    //                                                                                // 6
+    // The `each` method of the hook calls its iterator function argument             // 7
+    // with each registered callback.  This allows the hook to                        // 8
+    // conditionally decide not to call the callback (if, for example, the            // 9
+    // observed object has been closed or terminated).                                // 10
+    //                                                                                // 11
+    // By default, callbacks are bound with `Meteor.bindEnvironment`, so they will be
+    // called with the Meteor environment of the calling code that                    // 13
+    // registered the callback. Override by passing { bindEnvironment: false }        // 14
+    // to the constructor.                                                            // 15
+    //                                                                                // 16
+    // Registering a callback returns an object with a single `stop`                  // 17
+    // method which unregisters the callback.                                         // 18
+    //                                                                                // 19
+    // The code is careful to allow a callback to be safely unregistered              // 20
+    // while the callbacks are being iterated over.                                   // 21
+    //                                                                                // 22
+    // If the hook is configured with the `exceptionHandler` option, the              // 23
+    // handler will be called if a called callback throws an exception.               // 24
+    // By default (if the exception handler doesn't itself throw an                   // 25
+    // exception, or if the iterator function doesn't return a falsy value            // 26
+    // to terminate the calling of callbacks), the remaining callbacks                // 27
+    // will still be called.                                                          // 28
+    //                                                                                // 29
+    // Alternatively, the `debugPrintExceptions` option can be specified              // 30
+    // as string describing the callback.  On an exception the string and             // 31
+    // the exception will be printed to the console log with                          // 32
+    // `Meteor._debug`, and the exception otherwise ignored.                          // 33
+    //                                                                                // 34
+    // If an exception handler isn't specified, exceptions thrown in the              // 35
+    // callback will propagate up to the iterator function, and will                  // 36
+    // terminate calling the remaining callbacks if not caught.                       // 37
+    // 38
+    Hook = function (options) {
+      // 39
+      var self = this; // 40
+      options = options || {}; // 41
+      self.nextCallbackId = 0; // 42
+      self.callbacks = {}; // 43
+      // Whether to wrap callbacks with Meteor.bindEnvironment                        // 44
+      self.bindEnvironment = true; // 45
+      if (options.bindEnvironment === false) // 46
+        self.bindEnvironment = false; // 47
+      // 48
+      if (options.exceptionHandler) // 49
+        self.exceptionHandler = options.exceptionHandler; // 50
+      else if (options.debugPrintExceptions) {
+          // 51
+          if (!_.isString(options.debugPrintExceptions)) // 52
+            throw new Error("Hook option debugPrintExceptions should be a string"); // 53
+          self.exceptionHandler = options.debugPrintExceptions; // 54
+        } // 55
+    }; // 56
+    // 57
+    _.extend(Hook.prototype, { // 58
+      register: function (callback) {
+        // 59
+        var self = this; // 60
+        var exceptionHandler = self.exceptionHandler || function (exception) {
+          // 61
+          // Note: this relies on the undocumented fact that if bindEnvironment's     // 62
+          // onException throws, and you are invoking the callback either in the      // 63
+          // browser or from within a Fiber in Node, the exception is propagated.     // 64
+          throw exception; // 65
+        }; // 66
+        // 67
+        if (self.bindEnvironment) {
+          // 68
+          callback = Meteor.bindEnvironment(callback, exceptionHandler); // 69
+        } else {
+          // 70
+          callback = dontBindEnvironment(callback, exceptionHandler); // 71
+        } // 72
+        // 73
+        var id = self.nextCallbackId++; // 74
+        self.callbacks[id] = callback; // 75
+        // 76
+        return { // 77
+          stop: function () {
+            // 78
+            delete self.callbacks[id]; // 79
+          } // 80
+        }; // 81
+      }, // 82
+      // 83
+      // For each registered callback, call the passed iterator function              // 84
+      // with the callback.                                                           // 85
+      //                                                                              // 86
+      // The iterator function can choose whether or not to call the                  // 87
+      // callback.  (For example, it might not call the callback if the               // 88
+      // observed object has been closed or terminated).                              // 89
+      //                                                                              // 90
+      // The iteration is stopped if the iterator function returns a falsy            // 91
+      // value or throws an exception.                                                // 92
+      //                                                                              // 93
+      each: function (iterator) {
+        // 94
+        var self = this; // 95
+        // 96
+        // Invoking bindEnvironment'd callbacks outside of a Fiber in Node doesn't    // 97
+        // run them to completion (and exceptions thrown from onException are not     // 98
+        // propagated), so we need to be in a Fiber.                                  // 99
+        Meteor._nodeCodeMustBeInFiber(); // 100
+        // 101
+        var ids = _.keys(self.callbacks); // 102
+        for (var i = 0; i < ids.length; ++i) {
+          // 103
+          var id = ids[i]; // 104
+          // check to see if the callback was removed during iteration                // 105
+          if (_.has(self.callbacks, id)) {
+            // 106
+            var callback = self.callbacks[id]; // 107
+            // 108
+            if (!iterator(callback)) // 109
+              break; // 110
+          } // 111
+        } // 112
+      } // 113
+    }); // 114
+    // 115
+    // Copied from Meteor.bindEnvironment and removed all the env stuff.              // 116
+    var dontBindEnvironment = function (func, onException, _this) {
+      // 117
+      if (!onException || typeof onException === 'string') {
+        // 118
+        var description = onException || "callback of async function"; // 119
+        onException = function (error) {
+          // 120
+          Meteor._debug( // 121
+          "Exception in " + description + ":", // 122
+          error && error.stack || error // 123
+          ); // 124
+        }; // 125
+      } // 126
+      // 127
+      return function () /* arguments */{
+        // 128
+        var args = _.toArray(arguments); // 129
+        // 130
+        var runAndHandleExceptions = function () {
+          // 131
+          try {
+            // 132
+            var ret = func.apply(_this, args); // 133
+          } catch (e) {
+            // 134
+            onException(e); // 135
+          } // 136
+          return ret; // 137
+        }; // 138
+        // 139
+        return runAndHandleExceptions(); // 140
+      }; // 141
+    }; // 142
+    // 143
+    ////////////////////////////////////////////////////////////////////////////////////
+  }).call(this);
+
+  /* Exports */
+  if (typeof Package === 'undefined') Package = {};
+  (function (pkg, symbols) {
+    for (var s in symbols) s in pkg || (pkg[s] = symbols[s]);
+  })(Package['callback-hook'] = {}, {
+    Hook: Hook
+  });
+})();//////////////////////////////////////////////////////////////////////////
+//                                                                      //
+// This is a generated file. You can view the original                  //
+// source in your browser if your browser supports source maps.         //
+// Source maps are supported by all recent versions of Chrome, Safari,  //
+// and Firefox, and by Internet Explorer 11.                            //
+//                                                                      //
+//////////////////////////////////////////////////////////////////////////
+
+
+(function () {
+
+  /* Imports */
+  var Meteor = Package.meteor.Meteor;
+  var global = Package.meteor.global;
+  var meteorEnv = Package.meteor.meteorEnv;
   var check = Package.check.check;
   var Match = Package.check.Match;
   var Random = Package.random.Random;
@@ -20937,6 +21137,7 @@ __meteor_runtime_config__ = {
     var Deps = Package.tracker.Deps;
     var Retry = Package.retry.Retry;
     var IdMap = Package['id-map'].IdMap;
+    var Hook = Package['callback-hook'].Hook;
     var DDPCommon = Package['ddp-common'].DDPCommon;
     var DiffSequence = Package['diff-sequence'].DiffSequence;
     var MongoID = Package['mongo-id'].MongoID;
@@ -24666,536 +24867,537 @@ __meteor_runtime_config__ = {
                         //
                         if (Meteor.isServer) {
                             // 4
-                            var path = Npm.require('path'); // 5
+                            var Fiber = Npm.require('fibers'); // 5
                             //
-                            var Fiber = Npm.require('fibers'); // 6
-                            //
-                            var Future = Npm.require(path.join('fibers', 'future')); // 7
-                        } // @param url {String|Object} URL to Meteor app,                                                                     // 8
-                        //   or an object as a test hook (see code)                                                                            // 11
-                        // Options:                                                                                                            // 12
-                        //   reloadWithOutstanding: is it OK to reload if there are outstanding methods?                                       // 13
-                        //   headers: extra headers to send on the websockets connection, for                                                  // 14
-                        //     server-to-server DDP only                                                                                       // 15
-                        //   _sockjsOptions: Specifies options to pass through to the sockjs client                                            // 16
-                        //   onDDPNegotiationVersionFailure: callback when version negotiation fails.                                          // 17
-                        //                                                                                                                     // 18
-                        // XXX There should be a way to destroy a DDP connection, causing all                                                  // 19
-                        // outstanding method calls to fail.                                                                                   // 20
-                        //                                                                                                                     // 21
-                        // XXX Our current way of handling failure and reconnection is great                                                   // 22
-                        // for an app (where we want to tolerate being disconnected as an                                                      // 23
-                        // expect state, and keep trying forever to reconnect) but cumbersome                                                  // 24
-                        // for something like a command line tool that wants to make a                                                         // 25
-                        // connection, call a method, and print an error if connection                                                         // 26
-                        // fails. We should have better usability in the latter case (while                                                    // 27
-                        // still transparently reconnecting if it's just a transient failure                                                   // 28
-                        // or the server migrating us).                                                                                        // 29
+                            var Future = Npm.require('fibers/future'); // 6
+                        } // @param url {String|Object} URL to Meteor app,                                                                     // 7
+                        //   or an object as a test hook (see code)                                                                            // 10
+                        // Options:                                                                                                            // 11
+                        //   reloadWithOutstanding: is it OK to reload if there are outstanding methods?                                       // 12
+                        //   headers: extra headers to send on the websockets connection, for                                                  // 13
+                        //     server-to-server DDP only                                                                                       // 14
+                        //   _sockjsOptions: Specifies options to pass through to the sockjs client                                            // 15
+                        //   onDDPNegotiationVersionFailure: callback when version negotiation fails.                                          // 16
+                        //                                                                                                                     // 17
+                        // XXX There should be a way to destroy a DDP connection, causing all                                                  // 18
+                        // outstanding method calls to fail.                                                                                   // 19
+                        //                                                                                                                     // 20
+                        // XXX Our current way of handling failure and reconnection is great                                                   // 21
+                        // for an app (where we want to tolerate being disconnected as an                                                      // 22
+                        // expect state, and keep trying forever to reconnect) but cumbersome                                                  // 23
+                        // for something like a command line tool that wants to make a                                                         // 24
+                        // connection, call a method, and print an error if connection                                                         // 25
+                        // fails. We should have better usability in the latter case (while                                                    // 26
+                        // still transparently reconnecting if it's just a transient failure                                                   // 27
+                        // or the server migrating us).                                                                                        // 28
                         //
                         //
                         var Connection = function (url, options) {
-                            // 30
-                            var self = this; // 31
-                            options = _.extend({ // 32
-                                onConnected: function () {}, // 33
+                            // 29
+                            var self = this; // 30
+                            options = _.extend({ // 31
+                                onConnected: function () {}, // 32
                                 onDDPVersionNegotiationFailure: function (description) {
-                                    // 34
-                                    Meteor._debug(description); // 35
-                                }, // 36
-                                heartbeatInterval: 17500, // 37
-                                heartbeatTimeout: 15000, // 38
-                                npmFayeOptions: {}, // 39
-                                // These options are only for testing.                                                                             // 40
-                                reloadWithOutstanding: false, // 41
-                                supportedDDPVersions: DDPCommon.SUPPORTED_DDP_VERSIONS, // 42
-                                retry: true, // 43
-                                respondToPings: true, // 44
-                                // When updates are coming within this ms interval, batch them together.                                           // 45
-                                bufferedWritesInterval: 5, // 46
-                                // Flush buffers immediately if writes are happening continuously for more than this many ms.                      // 47
-                                bufferedWritesMaxAge: 500 // 48
-                            }, options); // If set, called when we reconnect, queuing method calls _before_ the                                  // 32
-                            // existing outstanding ones. This is the only data member that is part of the                                       // 52
-                            // public API!                                                                                                       // 53
+                                    // 33
+                                    Meteor._debug(description); // 34
+                                }, // 35
+                                heartbeatInterval: 17500, // 36
+                                heartbeatTimeout: 15000, // 37
+                                npmFayeOptions: {}, // 38
+                                // These options are only for testing.                                                                             // 39
+                                reloadWithOutstanding: false, // 40
+                                supportedDDPVersions: DDPCommon.SUPPORTED_DDP_VERSIONS, // 41
+                                retry: true, // 42
+                                respondToPings: true, // 43
+                                // When updates are coming within this ms interval, batch them together.                                           // 44
+                                bufferedWritesInterval: 5, // 45
+                                // Flush buffers immediately if writes are happening continuously for more than this many ms.                      // 46
+                                bufferedWritesMaxAge: 500 // 47
+                            }, options); // If set, called when we reconnect, queuing method calls _before_ the                                  // 31
+                            // existing outstanding ones.                                                                                        // 51
+                            // NOTE: This feature has been preserved for backwards compatibility. The                                            // 52
+                            // preferred method of setting a callback on reconnect is to use                                                     // 53
+                            // DDP.onReconnect.                                                                                                  // 54
                             //
-                            self.onReconnect = null; // as a test hook, allow passing a stream instead of a url.                                 // 54
+                            self.onReconnect = null; // as a test hook, allow passing a stream instead of a url.                                 // 55
                             //
                             if ((typeof url === "undefined" ? "undefined" : (0, _typeof3.default)(url)) === "object") {
-                                // 57
-                                self._stream = url; // 58
+                                // 58
+                                self._stream = url; // 59
                             } else {
-                                // 59
-                                self._stream = new LivedataTest.ClientStream(url, { // 60
-                                    retry: options.retry, // 61
-                                    headers: options.headers, // 62
-                                    _sockjsOptions: options._sockjsOptions, // 63
-                                    // Used to keep some tests quiet, or for other cases in which                                                    // 64
-                                    // the right thing to do with connection errors is to silently                                                   // 65
-                                    // fail (e.g. sending package usage stats). At some point we                                                     // 66
-                                    // should have a real API for handling client-stream-level                                                       // 67
-                                    // errors.                                                                                                       // 68
-                                    _dontPrintErrors: options._dontPrintErrors, // 69
-                                    connectTimeoutMs: options.connectTimeoutMs, // 70
-                                    npmFayeOptions: options.npmFayeOptions // 71
-                                }); // 60
-                            } // 73
+                                // 60
+                                self._stream = new LivedataTest.ClientStream(url, { // 61
+                                    retry: options.retry, // 62
+                                    headers: options.headers, // 63
+                                    _sockjsOptions: options._sockjsOptions, // 64
+                                    // Used to keep some tests quiet, or for other cases in which                                                    // 65
+                                    // the right thing to do with connection errors is to silently                                                   // 66
+                                    // fail (e.g. sending package usage stats). At some point we                                                     // 67
+                                    // should have a real API for handling client-stream-level                                                       // 68
+                                    // errors.                                                                                                       // 69
+                                    _dontPrintErrors: options._dontPrintErrors, // 70
+                                    connectTimeoutMs: options.connectTimeoutMs, // 71
+                                    npmFayeOptions: options.npmFayeOptions // 72
+                                }); // 61
+                            } // 74
                             //
-                            self._lastSessionId = null; // 75
-                            self._versionSuggestion = null; // The last proposed DDP version.                                                    // 76
+                            self._lastSessionId = null; // 76
+                            self._versionSuggestion = null; // The last proposed DDP version.                                                    // 77
                             //
-                            self._version = null; // The DDP version agreed on by client and server.                                             // 77
+                            self._version = null; // The DDP version agreed on by client and server.                                             // 78
                             //
-                            self._stores = {}; // name -> object with methods                                                                    // 78
+                            self._stores = {}; // name -> object with methods                                                                    // 79
                             //
-                            self._methodHandlers = {}; // name -> func                                                                           // 79
+                            self._methodHandlers = {}; // name -> func                                                                           // 80
                             //
-                            self._nextMethodId = 1; // 80
-                            self._supportedDDPVersions = options.supportedDDPVersions; // 81
-                            self._heartbeatInterval = options.heartbeatInterval; // 83
+                            self._nextMethodId = 1; // 81
+                            self._supportedDDPVersions = options.supportedDDPVersions; // 82
+                            self._heartbeatInterval = options.heartbeatInterval; // 84
                             self._heartbeatTimeout = options.heartbeatTimeout; // Tracks methods which the user has tried to call but which have not yet
-                            // called their user callback (ie, they are waiting on their result or for all                                       // 87
-                            // of their writes to be written to the local cache). Map from method ID to                                          // 88
-                            // MethodInvoker object.                                                                                             // 89
+                            // called their user callback (ie, they are waiting on their result or for all                                       // 88
+                            // of their writes to be written to the local cache). Map from method ID to                                          // 89
+                            // MethodInvoker object.                                                                                             // 90
                             //
-                            self._methodInvokers = {}; // Tracks methods which the user has called but whose result messages have not            // 90
-                            // arrived yet.                                                                                                      // 93
-                            //                                                                                                                   // 94
-                            // _outstandingMethodBlocks is an array of blocks of methods. Each block                                             // 95
-                            // represents a set of methods that can run at the same time. The first block                                        // 96
-                            // represents the methods which are currently in flight; subsequent blocks                                           // 97
-                            // must wait for previous blocks to be fully finished before they can be sent                                        // 98
-                            // to the server.                                                                                                    // 99
-                            //                                                                                                                   // 100
-                            // Each block is an object with the following fields:                                                                // 101
-                            // - methods: a list of MethodInvoker objects                                                                        // 102
-                            // - wait: a boolean; if true, this block had a single method invoked with                                           // 103
-                            //         the "wait" option                                                                                         // 104
-                            //                                                                                                                   // 105
-                            // There will never be adjacent blocks with wait=false, because the only thing                                       // 106
-                            // that makes methods need to be serialized is a wait method.                                                        // 107
-                            //                                                                                                                   // 108
-                            // Methods are removed from the first block when their "result" is                                                   // 109
-                            // received. The entire first block is only removed when all of the in-flight                                        // 110
-                            // methods have received their results (so the "methods" list is empty) *AND*                                        // 111
-                            // all of the data written by those methods are visible in the local cache. So                                       // 112
-                            // it is possible for the first block's methods list to be empty, if we are                                          // 113
-                            // still waiting for some objects to quiesce.                                                                        // 114
-                            //                                                                                                                   // 115
-                            // Example:                                                                                                          // 116
-                            //  _outstandingMethodBlocks = [                                                                                     // 117
-                            //    {wait: false, methods: []},                                                                                    // 118
-                            //    {wait: true, methods: [<MethodInvoker for 'login'>]},                                                          // 119
-                            //    {wait: false, methods: [<MethodInvoker for 'foo'>,                                                             // 120
-                            //                            <MethodInvoker for 'bar'>]}]                                                           // 121
-                            // This means that there were some methods which were sent to the server and                                         // 122
-                            // which have returned their results, but some of the data written by                                                // 123
-                            // the methods may not be visible in the local cache. Once all that data is                                          // 124
-                            // visible, we will send a 'login' method. Once the login method has returned                                        // 125
-                            // and all the data is visible (including re-running subs if userId changes),                                        // 126
-                            // we will send the 'foo' and 'bar' methods in parallel.                                                             // 127
+                            self._methodInvokers = {}; // Tracks methods which the user has called but whose result messages have not            // 91
+                            // arrived yet.                                                                                                      // 94
+                            //                                                                                                                   // 95
+                            // _outstandingMethodBlocks is an array of blocks of methods. Each block                                             // 96
+                            // represents a set of methods that can run at the same time. The first block                                        // 97
+                            // represents the methods which are currently in flight; subsequent blocks                                           // 98
+                            // must wait for previous blocks to be fully finished before they can be sent                                        // 99
+                            // to the server.                                                                                                    // 100
+                            //                                                                                                                   // 101
+                            // Each block is an object with the following fields:                                                                // 102
+                            // - methods: a list of MethodInvoker objects                                                                        // 103
+                            // - wait: a boolean; if true, this block had a single method invoked with                                           // 104
+                            //         the "wait" option                                                                                         // 105
+                            //                                                                                                                   // 106
+                            // There will never be adjacent blocks with wait=false, because the only thing                                       // 107
+                            // that makes methods need to be serialized is a wait method.                                                        // 108
+                            //                                                                                                                   // 109
+                            // Methods are removed from the first block when their "result" is                                                   // 110
+                            // received. The entire first block is only removed when all of the in-flight                                        // 111
+                            // methods have received their results (so the "methods" list is empty) *AND*                                        // 112
+                            // all of the data written by those methods are visible in the local cache. So                                       // 113
+                            // it is possible for the first block's methods list to be empty, if we are                                          // 114
+                            // still waiting for some objects to quiesce.                                                                        // 115
+                            //                                                                                                                   // 116
+                            // Example:                                                                                                          // 117
+                            //  _outstandingMethodBlocks = [                                                                                     // 118
+                            //    {wait: false, methods: []},                                                                                    // 119
+                            //    {wait: true, methods: [<MethodInvoker for 'login'>]},                                                          // 120
+                            //    {wait: false, methods: [<MethodInvoker for 'foo'>,                                                             // 121
+                            //                            <MethodInvoker for 'bar'>]}]                                                           // 122
+                            // This means that there were some methods which were sent to the server and                                         // 123
+                            // which have returned their results, but some of the data written by                                                // 124
+                            // the methods may not be visible in the local cache. Once all that data is                                          // 125
+                            // visible, we will send a 'login' method. Once the login method has returned                                        // 126
+                            // and all the data is visible (including re-running subs if userId changes),                                        // 127
+                            // we will send the 'foo' and 'bar' methods in parallel.                                                             // 128
                             //
-                            self._outstandingMethodBlocks = []; // method ID -> array of objects with keys 'collection' and 'id', listing        // 128
-                            // documents written by a given method's stub. keys are associated with                                              // 131
-                            // methods whose stub wrote at least one document, and whose data-done message                                       // 132
-                            // has not yet been received.                                                                                        // 133
+                            self._outstandingMethodBlocks = []; // method ID -> array of objects with keys 'collection' and 'id', listing        // 129
+                            // documents written by a given method's stub. keys are associated with                                              // 132
+                            // methods whose stub wrote at least one document, and whose data-done message                                       // 133
+                            // has not yet been received.                                                                                        // 134
                             //
-                            self._documentsWrittenByStub = {}; // collection -> IdMap of "server document" object. A "server document" has:      // 134
-                            // - "document": the version of the document according the                                                           // 136
-                            //   server (ie, the snapshot before a stub wrote it, amended by any changes                                         // 137
-                            //   received from the server)                                                                                       // 138
-                            //   It is undefined if we think the document does not exist                                                         // 139
-                            // - "writtenByStubs": a set of method IDs whose stubs wrote to the document                                         // 140
-                            //   whose "data done" messages have not yet been processed                                                          // 141
+                            self._documentsWrittenByStub = {}; // collection -> IdMap of "server document" object. A "server document" has:      // 135
+                            // - "document": the version of the document according the                                                           // 137
+                            //   server (ie, the snapshot before a stub wrote it, amended by any changes                                         // 138
+                            //   received from the server)                                                                                       // 139
+                            //   It is undefined if we think the document does not exist                                                         // 140
+                            // - "writtenByStubs": a set of method IDs whose stubs wrote to the document                                         // 141
+                            //   whose "data done" messages have not yet been processed                                                          // 142
                             //
-                            self._serverDocuments = {}; // Array of callbacks to be called after the next update of the local                    // 142
-                            // cache. Used for:                                                                                                  // 145
-                            //  - Calling methodInvoker.dataVisible and sub ready callbacks after                                                // 146
-                            //    the relevant data is flushed.                                                                                  // 147
-                            //  - Invoking the callbacks of "half-finished" methods after reconnect                                              // 148
-                            //    quiescence. Specifically, methods whose result was received over the old                                       // 149
-                            //    connection (so we don't re-send it) but whose data had not been made                                           // 150
-                            //    visible.                                                                                                       // 151
+                            self._serverDocuments = {}; // Array of callbacks to be called after the next update of the local                    // 143
+                            // cache. Used for:                                                                                                  // 146
+                            //  - Calling methodInvoker.dataVisible and sub ready callbacks after                                                // 147
+                            //    the relevant data is flushed.                                                                                  // 148
+                            //  - Invoking the callbacks of "half-finished" methods after reconnect                                              // 149
+                            //    quiescence. Specifically, methods whose result was received over the old                                       // 150
+                            //    connection (so we don't re-send it) but whose data had not been made                                           // 151
+                            //    visible.                                                                                                       // 152
                             //
-                            self._afterUpdateCallbacks = []; // In two contexts, we buffer all incoming data messages and then process them      // 152
-                            // all at once in a single update:                                                                                   // 155
-                            //   - During reconnect, we buffer all data messages until all subs that had                                         // 156
-                            //     been ready before reconnect are ready again, and all methods that are                                         // 157
-                            //     active have returned their "data done message"; then                                                          // 158
-                            //   - During the execution of a "wait" method, we buffer all data messages                                          // 159
-                            //     until the wait method gets its "data done" message. (If the wait method                                       // 160
-                            //     occurs during reconnect, it doesn't get any special handling.)                                                // 161
-                            // all data messages are processed in one update.                                                                    // 162
-                            //                                                                                                                   // 163
-                            // The following fields are used for this "quiescence" process.                                                      // 164
-                            // This buffers the messages that aren't being processed yet.                                                        // 166
+                            self._afterUpdateCallbacks = []; // In two contexts, we buffer all incoming data messages and then process them      // 153
+                            // all at once in a single update:                                                                                   // 156
+                            //   - During reconnect, we buffer all data messages until all subs that had                                         // 157
+                            //     been ready before reconnect are ready again, and all methods that are                                         // 158
+                            //     active have returned their "data done message"; then                                                          // 159
+                            //   - During the execution of a "wait" method, we buffer all data messages                                          // 160
+                            //     until the wait method gets its "data done" message. (If the wait method                                       // 161
+                            //     occurs during reconnect, it doesn't get any special handling.)                                                // 162
+                            // all data messages are processed in one update.                                                                    // 163
+                            //                                                                                                                   // 164
+                            // The following fields are used for this "quiescence" process.                                                      // 165
+                            // This buffers the messages that aren't being processed yet.                                                        // 167
                             //
-                            self._messagesBufferedUntilQuiescence = []; // Map from method ID -> true. Methods are removed from this when their  // 167
-                            // "data done" message is received, and we will not quiesce until it is                                              // 169
-                            // empty.                                                                                                            // 170
+                            self._messagesBufferedUntilQuiescence = []; // Map from method ID -> true. Methods are removed from this when their  // 168
+                            // "data done" message is received, and we will not quiesce until it is                                              // 170
+                            // empty.                                                                                                            // 171
                             //
-                            self._methodsBlockingQuiescence = {}; // map from sub ID -> true for subs that were ready (ie, called the sub        // 171
-                            // ready callback) before reconnect but haven't become ready again yet                                               // 173
+                            self._methodsBlockingQuiescence = {}; // map from sub ID -> true for subs that were ready (ie, called the sub        // 172
+                            // ready callback) before reconnect but haven't become ready again yet                                               // 174
                             //
-                            self._subsBeingRevived = {}; // map from sub._id -> true                                                             // 174
-                            // if true, the next data update should reset all stores. (set during                                                // 175
-                            // reconnect.)                                                                                                       // 176
+                            self._subsBeingRevived = {}; // map from sub._id -> true                                                             // 175
+                            // if true, the next data update should reset all stores. (set during                                                // 176
+                            // reconnect.)                                                                                                       // 177
                             //
-                            self._resetStores = false; // name -> array of updates for (yet to be created) collections                           // 177
+                            self._resetStores = false; // name -> array of updates for (yet to be created) collections                           // 178
                             //
-                            self._updatesForUnknownStores = {}; // if we're blocking a migration, the retry func                                 // 180
+                            self._updatesForUnknownStores = {}; // if we're blocking a migration, the retry func                                 // 181
                             //
-                            self._retryMigrate = null; // 182
+                            self._retryMigrate = null; // 183
                             self.__flushBufferedWrites = Meteor.bindEnvironment(self._flushBufferedWrites, "flushing DDP buffered writes", self); // Collection name -> array of messages.
                             //
-                            self._bufferedWrites = {}; // When current buffer of updates must be flushed at, in ms timestamp.                    // 187
+                            self._bufferedWrites = {}; // When current buffer of updates must be flushed at, in ms timestamp.                    // 188
                             //
-                            self._bufferedWritesFlushAt = null; // Timeout handle for the next processing of all pending writes                  // 189
+                            self._bufferedWritesFlushAt = null; // Timeout handle for the next processing of all pending writes                  // 190
                             //
-                            self._bufferedWritesFlushHandle = null; // 191
-                            self._bufferedWritesInterval = options.bufferedWritesInterval; // 193
+                            self._bufferedWritesFlushHandle = null; // 192
+                            self._bufferedWritesInterval = options.bufferedWritesInterval; // 194
                             self._bufferedWritesMaxAge = options.bufferedWritesMaxAge; // metadata for subscriptions.  Map from sub ID to object with keys:
-                            //   - id                                                                                                            // 197
-                            //   - name                                                                                                          // 198
-                            //   - params                                                                                                        // 199
-                            //   - inactive (if true, will be cleaned up if not reused in re-run)                                                // 200
-                            //   - ready (has the 'ready' message been received?)                                                                // 201
-                            //   - readyCallback (an optional callback to call when ready)                                                       // 202
-                            //   - errorCallback (an optional callback to call if the sub terminates with                                        // 203
-                            //                    an error, XXX COMPAT WITH 1.0.3.1)                                                             // 204
-                            //   - stopCallback (an optional callback to call when the sub terminates                                            // 205
-                            //     for any reason, with an error argument if an error triggered the stop)                                        // 206
+                            //   - id                                                                                                            // 198
+                            //   - name                                                                                                          // 199
+                            //   - params                                                                                                        // 200
+                            //   - inactive (if true, will be cleaned up if not reused in re-run)                                                // 201
+                            //   - ready (has the 'ready' message been received?)                                                                // 202
+                            //   - readyCallback (an optional callback to call when ready)                                                       // 203
+                            //   - errorCallback (an optional callback to call if the sub terminates with                                        // 204
+                            //                    an error, XXX COMPAT WITH 1.0.3.1)                                                             // 205
+                            //   - stopCallback (an optional callback to call when the sub terminates                                            // 206
+                            //     for any reason, with an error argument if an error triggered the stop)                                        // 207
                             //
-                            self._subscriptions = {}; // Reactive userId.                                                                        // 207
+                            self._subscriptions = {}; // Reactive userId.                                                                        // 208
                             //
-                            self._userId = null; // 210
-                            self._userIdDeps = new Tracker.Dependency(); // Block auto-reload while we're waiting for method responses.          // 211
+                            self._userId = null; // 211
+                            self._userIdDeps = new Tracker.Dependency(); // Block auto-reload while we're waiting for method responses.          // 212
                             //
                             if (Meteor.isClient && Package.reload && !options.reloadWithOutstanding) {
-                                // 214
+                                // 215
                                 Package.reload.Reload._onMigrate(function (retry) {
-                                    // 215
+                                    // 216
                                     if (!self._readyToMigrate()) {
-                                        // 216
-                                        if (self._retryMigrate) throw new Error("Two migrations in progress?"); // 217
-                                        self._retryMigrate = retry; // 219
-                                        return false; // 220
+                                        // 217
+                                        if (self._retryMigrate) throw new Error("Two migrations in progress?"); // 218
+                                        self._retryMigrate = retry; // 220
+                                        return false; // 221
                                     } else {
-                                        // 221
-                                        return [true]; // 222
-                                    } // 223
-                                }); // 224
-                            } // 225
+                                        // 222
+                                        return [true]; // 223
+                                    } // 224
+                                }); // 225
+                            } // 226
                             //
                             var onMessage = function (raw_msg) {
-                                // 227
+                                // 228
                                 try {
-                                    // 228
-                                    var msg = DDPCommon.parseDDP(raw_msg); // 229
+                                    // 229
+                                    var msg = DDPCommon.parseDDP(raw_msg); // 230
                                 } catch (e) {
-                                    // 230
-                                    Meteor._debug("Exception while parsing DDP", e); // 231
+                                    // 231
+                                    Meteor._debug("Exception while parsing DDP", e); // 232
                                     //
-                                    return; // 232
-                                } // Any message counts as receiving a pong, as it demonstrates that                                               // 233
-                                // the server is still alive.                                                                                      // 236
+                                    return; // 233
+                                } // Any message counts as receiving a pong, as it demonstrates that                                               // 234
+                                // the server is still alive.                                                                                      // 237
                                 //
                                 //
                                 if (self._heartbeat) {
-                                    // 237
-                                    self._heartbeat.messageReceived(); // 238
-                                } // 239
+                                    // 238
+                                    self._heartbeat.messageReceived(); // 239
+                                } // 240
                                 //
                                 if (msg === null || !msg.msg) {
-                                    // 241
-                                    // XXX COMPAT WITH 0.6.6. ignore the old welcome message for back                                                // 242
-                                    // compat.  Remove this 'if' once the server stops sending welcome                                               // 243
-                                    // messages (stream_server.js).                                                                                  // 244
-                                    if (!(msg && msg.server_id)) Meteor._debug("discarding invalid livedata message", msg); // 245
-                                    return; // 247
-                                } // 248
+                                    // 242
+                                    // XXX COMPAT WITH 0.6.6. ignore the old welcome message for back                                                // 243
+                                    // compat.  Remove this 'if' once the server stops sending welcome                                               // 244
+                                    // messages (stream_server.js).                                                                                  // 245
+                                    if (!(msg && msg.server_id)) Meteor._debug("discarding invalid livedata message", msg); // 246
+                                    return; // 248
+                                } // 249
                                 //
                                 if (msg.msg === 'connected') {
-                                    // 250
-                                    self._version = self._versionSuggestion; // 251
+                                    // 251
+                                    self._version = self._versionSuggestion; // 252
                                     //
-                                    self._livedata_connected(msg); // 252
+                                    self._livedata_connected(msg); // 253
                                     //
-                                    options.onConnected(); // 253
+                                    options.onConnected(); // 254
                                 } else if (msg.msg === 'failed') {
-                                    // 254
+                                    // 255
                                     if (_.contains(self._supportedDDPVersions, msg.version)) {
-                                        // 256
-                                        self._versionSuggestion = msg.version; // 257
+                                        // 257
+                                        self._versionSuggestion = msg.version; // 258
                                         //
-                                        self._stream.reconnect({ // 258
-                                            _force: true // 258
-                                        }); // 258
+                                        self._stream.reconnect({ // 259
+                                            _force: true // 259
+                                        }); // 259
                                     } else {
-                                        // 259
-                                        var description = "DDP version negotiation failed; server requested version " + msg.version; // 260
+                                        // 260
+                                        var description = "DDP version negotiation failed; server requested version " + msg.version; // 261
                                         //
-                                        self._stream.disconnect({ // 262
-                                            _permanent: true, // 262
-                                            _error: description // 262
-                                        }); // 262
+                                        self._stream.disconnect({ // 263
+                                            _permanent: true, // 263
+                                            _error: description // 263
+                                        }); // 263
                                         //
-                                        options.onDDPVersionNegotiationFailure(description); // 263
-                                    } // 264
+                                        options.onDDPVersionNegotiationFailure(description); // 264
+                                    } // 265
                                 } else if (msg.msg === 'ping' && options.respondToPings) {
-                                    // 265
-                                    self._send({ // 267
-                                        msg: "pong", // 267
-                                        id: msg.id // 267
-                                    }); // 267
-                                } else if (msg.msg === 'pong') {// noop, as we assume everything's a pong                                          // 268
+                                    // 266
+                                    self._send({ // 268
+                                        msg: "pong", // 268
+                                        id: msg.id // 268
+                                    }); // 268
+                                } else if (msg.msg === 'pong') {// noop, as we assume everything's a pong                                          // 269
                                 } else if (_.include(['added', 'changed', 'removed', 'ready', 'updated'], msg.msg)) self._livedata_data(msg);else if (msg.msg === 'nosub') self._livedata_nosub(msg);else if (msg.msg === 'result') self._livedata_result(msg);else if (msg.msg === 'error') self._livedata_error(msg);else Meteor._debug("discarding unknown livedata message type", msg);
-                            }; // 282
+                            }; // 283
                             //
                             var onReset = function () {
-                                // 284
-                                // Send a connect message at the beginning of the stream.                                                          // 285
-                                // NOTE: reset is called even on the first connection, so this is                                                  // 286
-                                // the only place we send this message.                                                                            // 287
-                                var msg = { // 288
-                                    msg: 'connect' // 288
-                                }; // 288
-                                if (self._lastSessionId) msg.session = self._lastSessionId; // 289
-                                msg.version = self._versionSuggestion || self._supportedDDPVersions[0]; // 291
-                                self._versionSuggestion = msg.version; // 292
-                                msg.support = self._supportedDDPVersions; // 293
+                                // 285
+                                // Send a connect message at the beginning of the stream.                                                          // 286
+                                // NOTE: reset is called even on the first connection, so this is                                                  // 287
+                                // the only place we send this message.                                                                            // 288
+                                var msg = { // 289
+                                    msg: 'connect' // 289
+                                }; // 289
+                                if (self._lastSessionId) msg.session = self._lastSessionId; // 290
+                                msg.version = self._versionSuggestion || self._supportedDDPVersions[0]; // 292
+                                self._versionSuggestion = msg.version; // 293
+                                msg.support = self._supportedDDPVersions; // 294
                                 //
-                                self._send(msg); // Mark non-retry calls as failed. This has to be done early as getting these methods out of the  // 294
-                                // current block is pretty important to making sure that quiescence is properly calculated, as                     // 297
-                                // well as possibly moving on to another useful block.                                                             // 298
-                                // Only bother testing if there is an outstandingMethodBlock (there might not be, especially if                    // 300
-                                // we are connecting for the first time.                                                                           // 301
+                                self._send(msg); // Mark non-retry calls as failed. This has to be done early as getting these methods out of the  // 295
+                                // current block is pretty important to making sure that quiescence is properly calculated, as                     // 298
+                                // well as possibly moving on to another useful block.                                                             // 299
+                                // Only bother testing if there is an outstandingMethodBlock (there might not be, especially if                    // 301
+                                // we are connecting for the first time.                                                                           // 302
                                 //
                                 //
                                 if (self._outstandingMethodBlocks.length > 0) {
-                                    // 302
-                                    // If there is an outstanding method block, we only care about the first one as that is the                      // 303
-                                    // one that could have already sent messages with no response, that are not allowed to retry.                    // 304
-                                    var currentMethodBlock = self._outstandingMethodBlocks[0].methods; // 305
+                                    // 303
+                                    // If there is an outstanding method block, we only care about the first one as that is the                      // 304
+                                    // one that could have already sent messages with no response, that are not allowed to retry.                    // 305
+                                    var currentMethodBlock = self._outstandingMethodBlocks[0].methods; // 306
                                     self._outstandingMethodBlocks[0].methods = currentMethodBlock.filter(function (methodInvoker) {
-                                        // 306
-                                        // Methods with 'noRetry' option set are not allowed to re-send after                                          // 308
-                                        // recovering dropped connection.                                                                              // 309
+                                        // 307
+                                        // Methods with 'noRetry' option set are not allowed to re-send after                                          // 309
+                                        // recovering dropped connection.                                                                              // 310
                                         if (methodInvoker.sentMessage && methodInvoker.noRetry) {
-                                            // 310
-                                            // Make sure that the method is told that it failed.                                                         // 311
+                                            // 311
+                                            // Make sure that the method is told that it failed.                                                         // 312
                                             methodInvoker.receiveResult(new Meteor.Error('invocation-failed', 'Method invocation might have failed due to dropped connection. ' + 'Failing because `noRetry` option was passed to Meteor.apply.'));
-                                        } // Only keep a method if it wasn't sent or it's allowed to retry.                                            // 315
-                                        // This may leave the block empty, but we don't move on to the next                                            // 318
-                                        // block until the callback has been delivered, in _outstandingMethodFinished.                                 // 319
+                                        } // Only keep a method if it wasn't sent or it's allowed to retry.                                            // 316
+                                        // This may leave the block empty, but we don't move on to the next                                            // 319
+                                        // block until the callback has been delivered, in _outstandingMethodFinished.                                 // 320
                                         //
                                         //
-                                        return !(methodInvoker.sentMessage && methodInvoker.noRetry); // 320
-                                    }); // 321
-                                } // Now, to minimize setup latency, go ahead and blast out all of                                                 // 322
-                                // our pending methods ands subscriptions before we've even taken                                                  // 325
-                                // the necessary RTT to know if we successfully reconnected. (1)                                                   // 326
-                                // They're supposed to be idempotent, and where they are not,                                                      // 327
-                                // they can block retry in apply; (2) even if we did reconnect,                                                    // 328
-                                // we're not sure what messages might have gotten lost                                                             // 329
-                                // (in either direction) since we were disconnected (TCP being                                                     // 330
-                                // sloppy about that.)                                                                                             // 331
-                                // If the current block of methods all got their results (but didn't all get                                       // 333
-                                // their data visible), discard the empty block now.                                                               // 334
+                                        return !(methodInvoker.sentMessage && methodInvoker.noRetry); // 321
+                                    }); // 322
+                                } // Now, to minimize setup latency, go ahead and blast out all of                                                 // 323
+                                // our pending methods ands subscriptions before we've even taken                                                  // 326
+                                // the necessary RTT to know if we successfully reconnected. (1)                                                   // 327
+                                // They're supposed to be idempotent, and where they are not,                                                      // 328
+                                // they can block retry in apply; (2) even if we did reconnect,                                                    // 329
+                                // we're not sure what messages might have gotten lost                                                             // 330
+                                // (in either direction) since we were disconnected (TCP being                                                     // 331
+                                // sloppy about that.)                                                                                             // 332
+                                // If the current block of methods all got their results (but didn't all get                                       // 334
+                                // their data visible), discard the empty block now.                                                               // 335
                                 //
                                 //
                                 if (!_.isEmpty(self._outstandingMethodBlocks) && _.isEmpty(self._outstandingMethodBlocks[0].methods)) {
-                                    // 335
-                                    self._outstandingMethodBlocks.shift(); // 337
-                                } // Mark all messages as unsent, they have not yet been sent on this                                              // 338
-                                // connection.                                                                                                     // 341
+                                    // 336
+                                    self._outstandingMethodBlocks.shift(); // 338
+                                } // Mark all messages as unsent, they have not yet been sent on this                                              // 339
+                                // connection.                                                                                                     // 342
                                 //
                                 //
                                 _.each(self._methodInvokers, function (m) {
-                                    // 342
-                                    m.sentMessage = false; // 343
-                                }); // If an `onReconnect` handler is set, call it first. Go through                                               // 344
-                                // some hoops to ensure that methods that are called from within                                                   // 347
-                                // `onReconnect` get executed _before_ ones that were originally                                                   // 348
-                                // outstanding (since `onReconnect` is used to re-establish auth                                                   // 349
-                                // certificates)                                                                                                   // 350
+                                    // 343
+                                    m.sentMessage = false; // 344
+                                }); // If an `onReconnect` handler is set, call it first. Go through                                               // 345
+                                // some hoops to ensure that methods that are called from within                                                   // 348
+                                // `onReconnect` get executed _before_ ones that were originally                                                   // 349
+                                // outstanding (since `onReconnect` is used to re-establish auth                                                   // 350
+                                // certificates)                                                                                                   // 351
                                 //
                                 //
-                                if (self.onReconnect) self._callOnReconnectAndSendAppropriateOutstandingMethods();else self._sendOutstandingMethods(); // add new subscriptions at the end. this way they take effect after
-                                // the handlers and we don't see flicker.                                                                          // 357
+                                self._callOnReconnectAndSendAppropriateOutstandingMethods(); // add new subscriptions at the end. this way they take effect after
+                                // the handlers and we don't see flicker.                                                                          // 355
+                                //
                                 //
                                 _.each(self._subscriptions, function (sub, id) {
-                                    // 358
-                                    self._send({ // 359
-                                        msg: 'sub', // 360
-                                        id: id, // 361
-                                        name: sub.name, // 362
-                                        params: sub.params // 363
-                                    }); // 359
-                                }); // 365
-                            }; // 366
+                                    // 356
+                                    self._send({ // 357
+                                        msg: 'sub', // 358
+                                        id: id, // 359
+                                        name: sub.name, // 360
+                                        params: sub.params // 361
+                                    }); // 357
+                                }); // 363
+                            }; // 364
                             //
                             var onDisconnect = function () {
-                                // 368
+                                // 366
                                 if (self._heartbeat) {
-                                    // 369
-                                    self._heartbeat.stop(); // 370
+                                    // 367
+                                    self._heartbeat.stop(); // 368
                                     //
-                                    self._heartbeat = null; // 371
-                                } // 372
-                            }; // 373
+                                    self._heartbeat = null; // 369
+                                } // 370
+                            }; // 371
                             //
                             if (Meteor.isServer) {
-                                // 375
-                                self._stream.on('message', Meteor.bindEnvironment(onMessage, "handling DDP message")); // 376
+                                // 373
+                                self._stream.on('message', Meteor.bindEnvironment(onMessage, "handling DDP message")); // 374
                                 //
-                                self._stream.on('reset', Meteor.bindEnvironment(onReset, "handling DDP reset")); // 377
+                                self._stream.on('reset', Meteor.bindEnvironment(onReset, "handling DDP reset")); // 375
                                 //
-                                self._stream.on('disconnect', Meteor.bindEnvironment(onDisconnect, "handling DDP disconnect")); // 378
+                                self._stream.on('disconnect', Meteor.bindEnvironment(onDisconnect, "handling DDP disconnect")); // 376
                             } else {
-                                // 379
-                                self._stream.on('message', onMessage); // 380
+                                // 377
+                                self._stream.on('message', onMessage); // 378
                                 //
-                                self._stream.on('reset', onReset); // 381
+                                self._stream.on('reset', onReset); // 379
                                 //
-                                self._stream.on('disconnect', onDisconnect); // 382
-                            } // 383
-                        }; // A MethodInvoker manages sending a method to the server and calling the user's                                    // 384
-                        // callbacks. On construction, it registers itself in the connection's                                                 // 387
-                        // _methodInvokers map; it removes itself once the method is fully finished and                                        // 388
-                        // the callback is invoked. This occurs when it has both received a result,                                            // 389
-                        // and the data written by it is fully visible.                                                                        // 390
+                                self._stream.on('disconnect', onDisconnect); // 380
+                            } // 381
+                        }; // A MethodInvoker manages sending a method to the server and calling the user's                                    // 382
+                        // callbacks. On construction, it registers itself in the connection's                                                 // 385
+                        // _methodInvokers map; it removes itself once the method is fully finished and                                        // 386
+                        // the callback is invoked. This occurs when it has both received a result,                                            // 387
+                        // and the data written by it is fully visible.                                                                        // 388
                         //
                         //
                         var MethodInvoker = function (options) {
-                            // 391
-                            var self = this; // Public (within this file) fields.                                                                // 392
+                            // 389
+                            var self = this; // Public (within this file) fields.                                                                // 390
                             //
-                            self.methodId = options.methodId; // 395
-                            self.sentMessage = false; // 396
-                            self._callback = options.callback; // 398
-                            self._connection = options.connection; // 399
-                            self._message = options.message; // 400
+                            self.methodId = options.methodId; // 393
+                            self.sentMessage = false; // 394
+                            self._callback = options.callback; // 396
+                            self._connection = options.connection; // 397
+                            self._message = options.message; // 398
                             //
-                            self._onResultReceived = options.onResultReceived || function () {}; // 401
+                            self._onResultReceived = options.onResultReceived || function () {}; // 399
                             //
-                            self._wait = options.wait; // 402
-                            self.noRetry = options.noRetry; // 403
-                            self._methodResult = null; // 404
-                            self._dataVisible = false; // Register with the connection.                                                          // 405
+                            self._wait = options.wait; // 400
+                            self.noRetry = options.noRetry; // 401
+                            self._methodResult = null; // 402
+                            self._dataVisible = false; // Register with the connection.                                                          // 403
                             //
-                            self._connection._methodInvokers[self.methodId] = self; // 408
-                        }; // 409
+                            self._connection._methodInvokers[self.methodId] = self; // 406
+                        }; // 407
                         //
-                        _.extend(MethodInvoker.prototype, { // 410
-                            // Sends the method message to the server. May be called additional times if                                         // 411
-                            // we lose the connection and reconnect before receiving a result.                                                   // 412
+                        _.extend(MethodInvoker.prototype, { // 408
+                            // Sends the method message to the server. May be called additional times if                                         // 409
+                            // we lose the connection and reconnect before receiving a result.                                                   // 410
                             sendMessage: function () {
-                                // 413
-                                var self = this; // This function is called before sending a method (including resending on                        // 414
-                                // reconnect). We should only (re)send methods where we don't already have a                                       // 416
-                                // result!                                                                                                         // 417
+                                // 411
+                                var self = this; // This function is called before sending a method (including resending on                        // 412
+                                // reconnect). We should only (re)send methods where we don't already have a                                       // 414
+                                // result!                                                                                                         // 415
                                 //
                                 if (self.gotResult()) throw new Error("sendingMethod is called on method with result"); // If we're re-sending it, it doesn't matter if data was written the first
-                                // time.                                                                                                           // 423
+                                // time.                                                                                                           // 421
                                 //
-                                self._dataVisible = false; // 424
-                                self.sentMessage = true; // If this is a wait method, make all data messages be buffered until it is               // 425
-                                // done.                                                                                                           // 428
+                                self._dataVisible = false; // 422
+                                self.sentMessage = true; // If this is a wait method, make all data messages be buffered until it is               // 423
+                                // done.                                                                                                           // 426
                                 //
-                                if (self._wait) self._connection._methodsBlockingQuiescence[self.methodId] = true; // Actually send the message.   // 429
+                                if (self._wait) self._connection._methodsBlockingQuiescence[self.methodId] = true; // Actually send the message.   // 427
                                 //
-                                self._connection._send(self._message); // 433
-                            }, // 434
-                            // Invoke the callback, if we have both a result and know that all data has                                          // 435
-                            // been written to the local cache.                                                                                  // 436
+                                self._connection._send(self._message); // 431
+                            }, // 432
+                            // Invoke the callback, if we have both a result and know that all data has                                          // 433
+                            // been written to the local cache.                                                                                  // 434
                             _maybeInvokeCallback: function () {
-                                // 437
-                                var self = this; // 438
+                                // 435
+                                var self = this; // 436
                                 //
                                 if (self._methodResult && self._dataVisible) {
-                                    // 439
-                                    // Call the callback. (This won't throw: the callback was wrapped with                                           // 440
-                                    // bindEnvironment.)                                                                                             // 441
-                                    self._callback(self._methodResult[0], self._methodResult[1]); // Forget about this method.                       // 442
+                                    // 437
+                                    // Call the callback. (This won't throw: the callback was wrapped with                                           // 438
+                                    // bindEnvironment.)                                                                                             // 439
+                                    self._callback(self._methodResult[0], self._methodResult[1]); // Forget about this method.                       // 440
                                     //
                                     //
                                     delete self._connection._methodInvokers[self.methodId]; // Let the connection know that this method is finished, so it can try to
-                                    // move on to the next block of methods.                                                                         // 448
+                                    // move on to the next block of methods.                                                                         // 446
                                     //
-                                    self._connection._outstandingMethodFinished(); // 449
-                                } // 450
-                            }, // 451
-                            // Call with the result of the method from the server. Only may be called                                            // 452
-                            // once; once it is called, you should not call sendMessage again.                                                   // 453
-                            // If the user provided an onResultReceived callback, call it immediately.                                           // 454
-                            // Then invoke the main callback if data is also visible.                                                            // 455
+                                    self._connection._outstandingMethodFinished(); // 447
+                                } // 448
+                            }, // 449
+                            // Call with the result of the method from the server. Only may be called                                            // 450
+                            // once; once it is called, you should not call sendMessage again.                                                   // 451
+                            // If the user provided an onResultReceived callback, call it immediately.                                           // 452
+                            // Then invoke the main callback if data is also visible.                                                            // 453
                             receiveResult: function (err, result) {
-                                // 456
-                                var self = this; // 457
-                                if (self.gotResult()) throw new Error("Methods should only receive results once"); // 458
-                                self._methodResult = [err, result]; // 460
+                                // 454
+                                var self = this; // 455
+                                if (self.gotResult()) throw new Error("Methods should only receive results once"); // 456
+                                self._methodResult = [err, result]; // 458
                                 //
-                                self._onResultReceived(err, result); // 461
+                                self._onResultReceived(err, result); // 459
                                 //
-                                self._maybeInvokeCallback(); // 462
-                            }, // 463
-                            // Call this when all data written by the method is visible. This means that                                         // 464
-                            // the method has returns its "data is done" message *AND* all server                                                // 465
-                            // documents that are buffered at that time have been written to the local                                           // 466
-                            // cache. Invokes the main callback if the result has been received.                                                 // 467
+                                self._maybeInvokeCallback(); // 460
+                            }, // 461
+                            // Call this when all data written by the method is visible. This means that                                         // 462
+                            // the method has returns its "data is done" message *AND* all server                                                // 463
+                            // documents that are buffered at that time have been written to the local                                           // 464
+                            // cache. Invokes the main callback if the result has been received.                                                 // 465
                             dataVisible: function () {
-                                // 468
-                                var self = this; // 469
-                                self._dataVisible = true; // 470
+                                // 466
+                                var self = this; // 467
+                                self._dataVisible = true; // 468
                                 //
-                                self._maybeInvokeCallback(); // 471
-                            }, // 472
-                            // True if receiveResult has been called.                                                                            // 473
+                                self._maybeInvokeCallback(); // 469
+                            }, // 470
+                            // True if receiveResult has been called.                                                                            // 471
                             gotResult: function () {
-                                // 474
-                                var self = this; // 475
-                                return !!self._methodResult; // 476
-                            } // 477
-                        }); // 410
+                                // 472
+                                var self = this; // 473
+                                return !!self._methodResult; // 474
+                            } // 475
+                        }); // 408
                         //
-                        _.extend(Connection.prototype, { // 480
-                            // 'name' is the name of the data on the wire that should go in the                                                  // 481
-                            // store. 'wrappedStore' should be an object with methods beginUpdate, update,                                       // 482
-                            // endUpdate, saveOriginals, retrieveOriginals. see Collection for an example.                                       // 483
+                        _.extend(Connection.prototype, { // 478
+                            // 'name' is the name of the data on the wire that should go in the                                                  // 479
+                            // store. 'wrappedStore' should be an object with methods beginUpdate, update,                                       // 480
+                            // endUpdate, saveOriginals, retrieveOriginals. see Collection for an example.                                       // 481
                             registerStore: function (name, wrappedStore) {
-                                // 484
-                                var self = this; // 485
-                                if (name in self._stores) return false; // Wrap the input object in an object which makes any store method not     // 487
-                                // implemented by 'store' into a no-op.                                                                            // 491
+                                // 482
+                                var self = this; // 483
+                                if (name in self._stores) return false; // Wrap the input object in an object which makes any store method not     // 485
+                                // implemented by 'store' into a no-op.                                                                            // 489
                                 //
-                                var store = {}; // 492
+                                var store = {}; // 490
                                 //
                                 _.each(['update', 'beginUpdate', 'endUpdate', 'saveOriginals', 'retrieveOriginals', 'getDoc', '_getCollection'], function (method) {
                                     store[method] = function () {
-                                        // 496
-                                        return wrappedStore[method] ? wrappedStore[method].apply(wrappedStore, arguments) : undefined; // 497
-                                    }; // 500
-                                }); // 501
+                                        // 494
+                                        return wrappedStore[method] ? wrappedStore[method].apply(wrappedStore, arguments) : undefined; // 495
+                                    }; // 498
+                                }); // 499
                                 //
-                                self._stores[name] = store; // 503
-                                var queued = self._updatesForUnknownStores[name]; // 505
+                                self._stores[name] = store; // 501
+                                var queued = self._updatesForUnknownStores[name]; // 503
                                 //
                                 if (queued) {
-                                    // 506
-                                    store.beginUpdate(queued.length, false); // 507
+                                    // 504
+                                    store.beginUpdate(queued.length, false); // 505
                                     //
                                     _.each(queued, function (msg) {
-                                        // 508
-                                        store.update(msg); // 509
-                                    }); // 510
+                                        // 506
+                                        store.update(msg); // 507
+                                    }); // 508
                                     //
-                                    store.endUpdate(); // 511
-                                    delete self._updatesForUnknownStores[name]; // 512
-                                } // 513
+                                    store.endUpdate(); // 509
+                                    delete self._updatesForUnknownStores[name]; // 510
+                                } // 511
                                 //
-                                return true; // 515
-                            }, // 516
-                            /**                                                                                                                  // 518
+                                return true; // 513
+                            }, // 514
+                            /**                                                                                                                  // 516
                              * @memberOf Meteor                                                                                                  //
                              * @importFromPackage meteor                                                                                         //
                              * @summary Subscribe to a record set.  Returns a handle that provides                                               //
@@ -25211,209 +25413,209 @@ __meteor_runtime_config__ = {
                              * is interpreted as an `onReady` callback.                                                                          //
                              */subscribe: function (name /* .. [arguments] .. (callback|callbacks) */) {
                                 //
-                                var self = this; // 534
-                                var params = Array.prototype.slice.call(arguments, 1); // 536
-                                var callbacks = {}; // 537
+                                var self = this; // 532
+                                var params = Array.prototype.slice.call(arguments, 1); // 534
+                                var callbacks = {}; // 535
                                 //
                                 if (params.length) {
-                                    // 538
-                                    var lastParam = params[params.length - 1]; // 539
+                                    // 536
+                                    var lastParam = params[params.length - 1]; // 537
                                     //
                                     if (_.isFunction(lastParam)) {
-                                        // 540
-                                        callbacks.onReady = params.pop(); // 541
-                                    } else if (lastParam && // XXX COMPAT WITH 1.0.3.1 onError used to exist, but now we use                         // 542
-                                    // onStop with an error callback instead.                                                                        // 544
+                                        // 538
+                                        callbacks.onReady = params.pop(); // 539
+                                    } else if (lastParam && // XXX COMPAT WITH 1.0.3.1 onError used to exist, but now we use                         // 540
+                                    // onStop with an error callback instead.                                                                        // 542
                                     _.any([lastParam.onReady, lastParam.onError, lastParam.onStop], _.isFunction)) {
-                                        // 545
-                                        callbacks = params.pop(); // 547
-                                    } // 548
-                                } // Is there an existing sub with the same name and param, run in an                                              // 549
-                                // invalidated Computation? This will happen if we are rerunning an                                                // 552
-                                // existing computation.                                                                                           // 553
+                                        // 543
+                                        callbacks = params.pop(); // 545
+                                    } // 546
+                                } // Is there an existing sub with the same name and param, run in an                                              // 547
+                                // invalidated Computation? This will happen if we are rerunning an                                                // 550
+                                // existing computation.                                                                                           // 551
+                                //                                                                                                                 // 552
+                                // For example, consider a rerun of:                                                                               // 553
                                 //                                                                                                                 // 554
-                                // For example, consider a rerun of:                                                                               // 555
-                                //                                                                                                                 // 556
-                                //     Tracker.autorun(function () {                                                                               // 557
-                                //       Meteor.subscribe("foo", Session.get("foo"));                                                              // 558
-                                //       Meteor.subscribe("bar", Session.get("bar"));                                                              // 559
-                                //     });                                                                                                         // 560
-                                //                                                                                                                 // 561
-                                // If "foo" has changed but "bar" has not, we will match the "bar"                                                 // 562
-                                // subcribe to an existing inactive subscription in order to not                                                   // 563
-                                // unsub and resub the subscription unnecessarily.                                                                 // 564
-                                //                                                                                                                 // 565
-                                // We only look for one such sub; if there are N apparently-identical subs                                         // 566
-                                // being invalidated, we will require N matching subscribe calls to keep                                           // 567
-                                // them all active.                                                                                                // 568
+                                //     Tracker.autorun(function () {                                                                               // 555
+                                //       Meteor.subscribe("foo", Session.get("foo"));                                                              // 556
+                                //       Meteor.subscribe("bar", Session.get("bar"));                                                              // 557
+                                //     });                                                                                                         // 558
+                                //                                                                                                                 // 559
+                                // If "foo" has changed but "bar" has not, we will match the "bar"                                                 // 560
+                                // subcribe to an existing inactive subscription in order to not                                                   // 561
+                                // unsub and resub the subscription unnecessarily.                                                                 // 562
+                                //                                                                                                                 // 563
+                                // We only look for one such sub; if there are N apparently-identical subs                                         // 564
+                                // being invalidated, we will require N matching subscribe calls to keep                                           // 565
+                                // them all active.                                                                                                // 566
                                 //
                                 //
                                 var existing = _.find(self._subscriptions, function (sub) {
-                                    // 569
-                                    return sub.inactive && sub.name === name && EJSON.equals(sub.params, params); // 570
-                                }); // 572
+                                    // 567
+                                    return sub.inactive && sub.name === name && EJSON.equals(sub.params, params); // 568
+                                }); // 570
                                 //
-                                var id; // 574
+                                var id; // 572
                                 //
                                 if (existing) {
-                                    // 575
-                                    id = existing.id; // 576
-                                    existing.inactive = false; // reactivate                                                                         // 577
+                                    // 573
+                                    id = existing.id; // 574
+                                    existing.inactive = false; // reactivate                                                                         // 575
                                     //
                                     if (callbacks.onReady) {
-                                        // 579
-                                        // If the sub is not already ready, replace any ready callback with the                                        // 580
-                                        // one provided now. (It's not really clear what users would expect for                                        // 581
-                                        // an onReady callback inside an autorun; the semantics we provide is                                          // 582
-                                        // that at the time the sub first becomes ready, we call the last                                              // 583
-                                        // onReady callback provided, if any.)                                                                         // 584
-                                        // If the sub is already ready, run the ready callback right away.                                             // 585
-                                        // It seems that users would expect an onReady callback inside an                                              // 586
-                                        // autorun to trigger once the the sub first becomes ready and also                                            // 587
-                                        // when re-subs happens.                                                                                       // 588
+                                        // 577
+                                        // If the sub is not already ready, replace any ready callback with the                                        // 578
+                                        // one provided now. (It's not really clear what users would expect for                                        // 579
+                                        // an onReady callback inside an autorun; the semantics we provide is                                          // 580
+                                        // that at the time the sub first becomes ready, we call the last                                              // 581
+                                        // onReady callback provided, if any.)                                                                         // 582
+                                        // If the sub is already ready, run the ready callback right away.                                             // 583
+                                        // It seems that users would expect an onReady callback inside an                                              // 584
+                                        // autorun to trigger once the the sub first becomes ready and also                                            // 585
+                                        // when re-subs happens.                                                                                       // 586
                                         if (existing.ready) {
-                                            // 589
-                                            callbacks.onReady(); // 590
+                                            // 587
+                                            callbacks.onReady(); // 588
                                         } else {
-                                            // 591
-                                            existing.readyCallback = callbacks.onReady; // 592
-                                        } // 593
-                                    } // XXX COMPAT WITH 1.0.3.1 we used to have onError but now we call                                             // 594
-                                    // onStop with an optional error argument                                                                        // 597
+                                            // 589
+                                            existing.readyCallback = callbacks.onReady; // 590
+                                        } // 591
+                                    } // XXX COMPAT WITH 1.0.3.1 we used to have onError but now we call                                             // 592
+                                    // onStop with an optional error argument                                                                        // 595
                                     //
                                     //
                                     if (callbacks.onError) {
-                                        // 598
-                                        // Replace existing callback if any, so that errors aren't                                                     // 599
-                                        // double-reported.                                                                                            // 600
-                                        existing.errorCallback = callbacks.onError; // 601
-                                    } // 602
+                                        // 596
+                                        // Replace existing callback if any, so that errors aren't                                                     // 597
+                                        // double-reported.                                                                                            // 598
+                                        existing.errorCallback = callbacks.onError; // 599
+                                    } // 600
                                     //
                                     if (callbacks.onStop) {
-                                        // 604
-                                        existing.stopCallback = callbacks.onStop; // 605
-                                    } // 606
+                                        // 602
+                                        existing.stopCallback = callbacks.onStop; // 603
+                                    } // 604
                                 } else {
-                                    // 607
-                                    // New sub! Generate an id, save it locally, and send message.                                                   // 608
-                                    id = Random.id(); // 609
-                                    self._subscriptions[id] = { // 610
-                                        id: id, // 611
-                                        name: name, // 612
-                                        params: EJSON.clone(params), // 613
-                                        inactive: false, // 614
-                                        ready: false, // 615
-                                        readyDeps: new Tracker.Dependency(), // 616
-                                        readyCallback: callbacks.onReady, // 617
-                                        // XXX COMPAT WITH 1.0.3.1 #errorCallback                                                                      // 618
-                                        errorCallback: callbacks.onError, // 619
-                                        stopCallback: callbacks.onStop, // 620
-                                        connection: self, // 621
+                                    // 605
+                                    // New sub! Generate an id, save it locally, and send message.                                                   // 606
+                                    id = Random.id(); // 607
+                                    self._subscriptions[id] = { // 608
+                                        id: id, // 609
+                                        name: name, // 610
+                                        params: EJSON.clone(params), // 611
+                                        inactive: false, // 612
+                                        ready: false, // 613
+                                        readyDeps: new Tracker.Dependency(), // 614
+                                        readyCallback: callbacks.onReady, // 615
+                                        // XXX COMPAT WITH 1.0.3.1 #errorCallback                                                                      // 616
+                                        errorCallback: callbacks.onError, // 617
+                                        stopCallback: callbacks.onStop, // 618
+                                        connection: self, // 619
                                         remove: function () {
-                                            // 622
-                                            delete this.connection._subscriptions[this.id]; // 623
-                                            this.ready && this.readyDeps.changed(); // 624
-                                        }, // 625
+                                            // 620
+                                            delete this.connection._subscriptions[this.id]; // 621
+                                            this.ready && this.readyDeps.changed(); // 622
+                                        }, // 623
                                         stop: function () {
-                                            // 626
-                                            this.connection._send({ // 627
-                                                msg: 'unsub', // 627
-                                                id: id // 627
-                                            }); // 627
+                                            // 624
+                                            this.connection._send({ // 625
+                                                msg: 'unsub', // 625
+                                                id: id // 625
+                                            }); // 625
                                             //
-                                            this.remove(); // 628
+                                            this.remove(); // 626
                                             //
                                             if (callbacks.onStop) {
-                                                // 630
-                                                callbacks.onStop(); // 631
-                                            } // 632
-                                        } // 633
-                                    }; // 610
+                                                // 628
+                                                callbacks.onStop(); // 629
+                                            } // 630
+                                        } // 631
+                                    }; // 608
                                     //
-                                    self._send({ // 635
-                                        msg: 'sub', // 635
-                                        id: id, // 635
-                                        name: name, // 635
-                                        params: params // 635
-                                    }); // 635
-                                } // return a handle to the application.                                                                           // 636
+                                    self._send({ // 633
+                                        msg: 'sub', // 633
+                                        id: id, // 633
+                                        name: name, // 633
+                                        params: params // 633
+                                    }); // 633
+                                } // return a handle to the application.                                                                           // 634
                                 //
                                 //
-                                var handle = { // 639
+                                var handle = { // 637
                                     stop: function () {
-                                        // 640
-                                        if (!_.has(self._subscriptions, id)) return; // 641
+                                        // 638
+                                        if (!_.has(self._subscriptions, id)) return; // 639
                                         //
-                                        self._subscriptions[id].stop(); // 644
-                                    }, // 645
+                                        self._subscriptions[id].stop(); // 642
+                                    }, // 643
                                     ready: function () {
-                                        // 646
-                                        // return false if we've unsubscribed.                                                                         // 647
-                                        if (!_.has(self._subscriptions, id)) return false; // 648
-                                        var record = self._subscriptions[id]; // 650
-                                        record.readyDeps.depend(); // 651
-                                        return record.ready; // 652
-                                    }, // 653
-                                    subscriptionId: id // 654
-                                }; // 639
+                                        // 644
+                                        // return false if we've unsubscribed.                                                                         // 645
+                                        if (!_.has(self._subscriptions, id)) return false; // 646
+                                        var record = self._subscriptions[id]; // 648
+                                        record.readyDeps.depend(); // 649
+                                        return record.ready; // 650
+                                    }, // 651
+                                    subscriptionId: id // 652
+                                }; // 637
                                 //
                                 if (Tracker.active) {
-                                    // 657
-                                    // We're in a reactive computation, so we'd like to unsubscribe when the                                         // 658
-                                    // computation is invalidated... but not if the rerun just re-subscribes                                         // 659
-                                    // to the same subscription!  When a rerun happens, we use onInvalidate                                          // 660
-                                    // as a change to mark the subscription "inactive" so that it can                                                // 661
-                                    // be reused from the rerun.  If it isn't reused, it's killed from                                               // 662
-                                    // an afterFlush.                                                                                                // 663
+                                    // 655
+                                    // We're in a reactive computation, so we'd like to unsubscribe when the                                         // 656
+                                    // computation is invalidated... but not if the rerun just re-subscribes                                         // 657
+                                    // to the same subscription!  When a rerun happens, we use onInvalidate                                          // 658
+                                    // as a change to mark the subscription "inactive" so that it can                                                // 659
+                                    // be reused from the rerun.  If it isn't reused, it's killed from                                               // 660
+                                    // an afterFlush.                                                                                                // 661
                                     Tracker.onInvalidate(function (c) {
-                                        // 664
-                                        if (_.has(self._subscriptions, id)) self._subscriptions[id].inactive = true; // 665
+                                        // 662
+                                        if (_.has(self._subscriptions, id)) self._subscriptions[id].inactive = true; // 663
                                         Tracker.afterFlush(function () {
-                                            // 668
-                                            if (_.has(self._subscriptions, id) && self._subscriptions[id].inactive) handle.stop(); // 669
-                                        }); // 672
-                                    }); // 673
-                                } // 674
+                                            // 666
+                                            if (_.has(self._subscriptions, id) && self._subscriptions[id].inactive) handle.stop(); // 667
+                                        }); // 670
+                                    }); // 671
+                                } // 672
                                 //
-                                return handle; // 676
-                            }, // 677
-                            // options:                                                                                                          // 679
-                            // - onLateError {Function(error)} called if an error was received after the ready event.                            // 680
-                            //     (errors received before ready cause an error to be thrown)                                                    // 681
+                                return handle; // 674
+                            }, // 675
+                            // options:                                                                                                          // 677
+                            // - onLateError {Function(error)} called if an error was received after the ready event.                            // 678
+                            //     (errors received before ready cause an error to be thrown)                                                    // 679
                             _subscribeAndWait: function (name, args, options) {
-                                // 682
-                                var self = this; // 683
-                                var f = new Future(); // 684
-                                var ready = false; // 685
-                                var handle; // 686
-                                args = args || []; // 687
-                                args.push({ // 688
+                                // 680
+                                var self = this; // 681
+                                var f = new Future(); // 682
+                                var ready = false; // 683
+                                var handle; // 684
+                                args = args || []; // 685
+                                args.push({ // 686
                                     onReady: function () {
-                                        // 689
-                                        ready = true; // 690
-                                        f['return'](); // 691
-                                    }, // 692
+                                        // 687
+                                        ready = true; // 688
+                                        f['return'](); // 689
+                                    }, // 690
                                     onError: function (e) {
-                                        // 693
-                                        if (!ready) f['throw'](e);else options && options.onLateError && options.onLateError(e); // 694
-                                    } // 698
-                                }); // 688
-                                handle = self.subscribe.apply(self, [name].concat(args)); // 701
-                                f.wait(); // 702
-                                return handle; // 703
-                            }, // 704
+                                        // 691
+                                        if (!ready) f['throw'](e);else options && options.onLateError && options.onLateError(e); // 692
+                                    } // 696
+                                }); // 686
+                                handle = self.subscribe.apply(self, [name].concat(args)); // 699
+                                f.wait(); // 700
+                                return handle; // 701
+                            }, // 702
                             methods: function (methods) {
-                                // 706
-                                var self = this; // 707
+                                // 704
+                                var self = this; // 705
                                 //
                                 _.each(methods, function (func, name) {
-                                    // 708
-                                    if (typeof func !== 'function') throw new Error("Method '" + name + "' must be a function"); // 709
-                                    if (self._methodHandlers[name]) throw new Error("A method named '" + name + "' is already defined"); // 711
-                                    self._methodHandlers[name] = func; // 713
-                                }); // 714
-                            }, // 715
-                            /**                                                                                                                  // 717
+                                    // 706
+                                    if (typeof func !== 'function') throw new Error("Method '" + name + "' must be a function"); // 707
+                                    if (self._methodHandlers[name]) throw new Error("A method named '" + name + "' is already defined"); // 709
+                                    self._methodHandlers[name] = func; // 711
+                                }); // 712
+                            }, // 713
+                            /**                                                                                                                  // 715
                              * @memberOf Meteor                                                                                                  //
                              * @importFromPackage meteor                                                                                         //
                              * @summary Invokes a method passing any number of arguments.                                                        //
@@ -25423,33 +25625,33 @@ __meteor_runtime_config__ = {
                              * @param {Function} [asyncCallback] Optional callback, which is called asynchronously with the error or result after the method is complete. If not provided, the method runs synchronously if possible (see below).
                              */call: function (name /* .. [arguments] .. callback */) {
                                 //
-                                // if it's a function, the last argument is the result callback,                                                   // 727
-                                // not a parameter to the remote method.                                                                           // 728
-                                var args = Array.prototype.slice.call(arguments, 1); // 729
-                                if (args.length && typeof args[args.length - 1] === "function") var callback = args.pop(); // 730
-                                return this.apply(name, args, callback); // 732
-                            }, // 733
-                            // @param options {Optional Object}                                                                                  // 735
-                            //   wait: Boolean - Should we wait to call this until all current methods                                           // 736
-                            //                   are fully finished, and block subsequent method calls                                           // 737
-                            //                   until this method is fully finished?                                                            // 738
-                            //                   (does not affect methods called from within this method)                                        // 739
-                            //   onResultReceived: Function - a callback to call as soon as the method                                           // 740
-                            //                                result is received. the data written by                                            // 741
-                            //                                the method may not yet be in the cache!                                            // 742
-                            //   returnStubValue: Boolean - If true then in cases where we would have                                            // 743
-                            //                              otherwise discarded the stub's return value                                          // 744
-                            //                              and returned undefined, instead we go ahead                                          // 745
-                            //                              and return it.  Specifically, this is any                                            // 746
-                            //                              time other than when (a) we are already                                              // 747
-                            //                              inside a stub or (b) we are in Node and no                                           // 748
-                            //                              callback was provided.  Currently we require                                         // 749
-                            //                              this flag to be explicitly passed to reduce                                          // 750
-                            //                              the likelihood that stub return values will                                          // 751
-                            //                              be confused with server return values; we                                            // 752
-                            //                              may improve this in future.                                                          // 753
-                            // @param callback {Optional Function}                                                                               // 754
-                            /**                                                                                                                  // 756
+                                // if it's a function, the last argument is the result callback,                                                   // 725
+                                // not a parameter to the remote method.                                                                           // 726
+                                var args = Array.prototype.slice.call(arguments, 1); // 727
+                                if (args.length && typeof args[args.length - 1] === "function") var callback = args.pop(); // 728
+                                return this.apply(name, args, callback); // 730
+                            }, // 731
+                            // @param options {Optional Object}                                                                                  // 733
+                            //   wait: Boolean - Should we wait to call this until all current methods                                           // 734
+                            //                   are fully finished, and block subsequent method calls                                           // 735
+                            //                   until this method is fully finished?                                                            // 736
+                            //                   (does not affect methods called from within this method)                                        // 737
+                            //   onResultReceived: Function - a callback to call as soon as the method                                           // 738
+                            //                                result is received. the data written by                                            // 739
+                            //                                the method may not yet be in the cache!                                            // 740
+                            //   returnStubValue: Boolean - If true then in cases where we would have                                            // 741
+                            //                              otherwise discarded the stub's return value                                          // 742
+                            //                              and returned undefined, instead we go ahead                                          // 743
+                            //                              and return it.  Specifically, this is any                                            // 744
+                            //                              time other than when (a) we are already                                              // 745
+                            //                              inside a stub or (b) we are in Node and no                                           // 746
+                            //                              callback was provided.  Currently we require                                         // 747
+                            //                              this flag to be explicitly passed to reduce                                          // 748
+                            //                              the likelihood that stub return values will                                          // 749
+                            //                              be confused with server return values; we                                            // 750
+                            //                              may improve this in future.                                                          // 751
+                            // @param callback {Optional Function}                                                                               // 752
+                            /**                                                                                                                  // 754
                              * @memberOf Meteor                                                                                                  //
                              * @importFromPackage meteor                                                                                         //
                              * @summary Invoke a method passing an array of arguments.                                                           //
@@ -25464,340 +25666,340 @@ __meteor_runtime_config__ = {
                              * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).          //
                              */apply: function (name, args, options, callback) {
                                 //
-                                var self = this; // We were passed 3 arguments. They may be either (name, args, options)                           // 771
-                                // or (name, args, callback)                                                                                       // 774
+                                var self = this; // We were passed 3 arguments. They may be either (name, args, options)                           // 769
+                                // or (name, args, callback)                                                                                       // 772
                                 //
                                 if (!callback && typeof options === 'function') {
-                                    // 775
-                                    callback = options; // 776
-                                    options = {}; // 777
-                                } // 778
+                                    // 773
+                                    callback = options; // 774
+                                    options = {}; // 775
+                                } // 776
                                 //
-                                options = options || {}; // 779
+                                options = options || {}; // 777
                                 //
                                 if (callback) {
-                                    // 781
-                                    // XXX would it be better form to do the binding in stream.on,                                                   // 782
-                                    // or caller, instead of here?                                                                                   // 783
-                                    // XXX improve error message (and how we report it)                                                              // 784
-                                    callback = Meteor.bindEnvironment(callback, "delivering result of invoking '" + name + "'"); // 785
-                                } // Keep our args safe from mutation (eg if we don't send the message for a                                       // 789
-                                // while because of a wait method).                                                                                // 792
+                                    // 779
+                                    // XXX would it be better form to do the binding in stream.on,                                                   // 780
+                                    // or caller, instead of here?                                                                                   // 781
+                                    // XXX improve error message (and how we report it)                                                              // 782
+                                    callback = Meteor.bindEnvironment(callback, "delivering result of invoking '" + name + "'"); // 783
+                                } // Keep our args safe from mutation (eg if we don't send the message for a                                       // 787
+                                // while because of a wait method).                                                                                // 790
                                 //
                                 //
-                                args = EJSON.clone(args); // Lazily allocate method ID once we know that it'll be needed.                          // 793
+                                args = EJSON.clone(args); // Lazily allocate method ID once we know that it'll be needed.                          // 791
                                 //
                                 var methodId = function () {
-                                    // 796
-                                    var id; // 797
+                                    // 794
+                                    var id; // 795
                                     return function () {
-                                        // 798
-                                        if (id === undefined) id = '' + self._nextMethodId++; // 799
-                                        return id; // 801
-                                    }; // 802
-                                }(); // 803
+                                        // 796
+                                        if (id === undefined) id = '' + self._nextMethodId++; // 797
+                                        return id; // 799
+                                    }; // 800
+                                }(); // 801
                                 //
-                                var enclosing = DDP._CurrentMethodInvocation.get(); // 805
+                                var enclosing = DDP._CurrentMethodInvocation.get(); // 803
                                 //
                                 var alreadyInSimulation = enclosing && enclosing.isSimulation; // Lazily generate a randomSeed, only if it is requested by the stub.
-                                // The random streams only have utility if they're used on both the client                                         // 809
-                                // and the server; if the client doesn't generate any 'random' values                                              // 810
-                                // then we don't expect the server to generate any either.                                                         // 811
-                                // Less commonly, the server may perform different actions from the client,                                        // 812
-                                // and may in fact generate values where the client did not, but we don't                                          // 813
-                                // have any client-side values to match, so even here we may as well just                                          // 814
-                                // use a random seed on the server.  In that case, we don't pass the                                               // 815
-                                // randomSeed to save bandwidth, and we don't even generate it to save a                                           // 816
-                                // bit of CPU and to avoid consuming entropy.                                                                      // 817
+                                // The random streams only have utility if they're used on both the client                                         // 807
+                                // and the server; if the client doesn't generate any 'random' values                                              // 808
+                                // then we don't expect the server to generate any either.                                                         // 809
+                                // Less commonly, the server may perform different actions from the client,                                        // 810
+                                // and may in fact generate values where the client did not, but we don't                                          // 811
+                                // have any client-side values to match, so even here we may as well just                                          // 812
+                                // use a random seed on the server.  In that case, we don't pass the                                               // 813
+                                // randomSeed to save bandwidth, and we don't even generate it to save a                                           // 814
+                                // bit of CPU and to avoid consuming entropy.                                                                      // 815
                                 //
-                                var randomSeed = null; // 818
+                                var randomSeed = null; // 816
                                 //
                                 var randomSeedGenerator = function () {
-                                    // 819
+                                    // 817
                                     if (randomSeed === null) {
-                                        // 820
-                                        randomSeed = DDPCommon.makeRpcSeed(enclosing, name); // 821
-                                    } // 822
+                                        // 818
+                                        randomSeed = DDPCommon.makeRpcSeed(enclosing, name); // 819
+                                    } // 820
                                     //
-                                    return randomSeed; // 823
-                                }; // Run the stub, if we have one. The stub is supposed to make some                                              // 824
-                                // temporary writes to the database to give the user a smooth experience                                           // 827
-                                // until the actual result of executing the method comes back from the                                             // 828
-                                // server (whereupon the temporary writes to the database will be reversed                                         // 829
-                                // during the beginUpdate/endUpdate process.)                                                                      // 830
-                                //                                                                                                                 // 831
-                                // Normally, we ignore the return value of the stub (even if it is an                                              // 832
-                                // exception), in favor of the real return value from the server. The                                              // 833
-                                // exception is if the *caller* is a stub. In that case, we're not going                                           // 834
-                                // to do a RPC, so we use the return value of the stub as our return                                               // 835
-                                // value.                                                                                                          // 836
+                                    return randomSeed; // 821
+                                }; // Run the stub, if we have one. The stub is supposed to make some                                              // 822
+                                // temporary writes to the database to give the user a smooth experience                                           // 825
+                                // until the actual result of executing the method comes back from the                                             // 826
+                                // server (whereupon the temporary writes to the database will be reversed                                         // 827
+                                // during the beginUpdate/endUpdate process.)                                                                      // 828
+                                //                                                                                                                 // 829
+                                // Normally, we ignore the return value of the stub (even if it is an                                              // 830
+                                // exception), in favor of the real return value from the server. The                                              // 831
+                                // exception is if the *caller* is a stub. In that case, we're not going                                           // 832
+                                // to do a RPC, so we use the return value of the stub as our return                                               // 833
+                                // value.                                                                                                          // 834
                                 //
                                 //
-                                var stub = self._methodHandlers[name]; // 838
+                                var stub = self._methodHandlers[name]; // 836
                                 //
                                 if (stub) {
-                                    // 839
+                                    // 837
                                     var setUserId = function (userId) {
-                                        // 840
-                                        self.setUserId(userId); // 841
-                                    }; // 842
+                                        // 838
+                                        self.setUserId(userId); // 839
+                                    }; // 840
                                     //
-                                    var invocation = new DDPCommon.MethodInvocation({ // 844
-                                        isSimulation: true, // 845
-                                        userId: self.userId(), // 846
-                                        setUserId: setUserId, // 847
+                                    var invocation = new DDPCommon.MethodInvocation({ // 842
+                                        isSimulation: true, // 843
+                                        userId: self.userId(), // 844
+                                        setUserId: setUserId, // 845
                                         randomSeed: function () {
-                                            // 848
-                                            return randomSeedGenerator(); // 848
-                                        } // 848
-                                    }); // 844
-                                    if (!alreadyInSimulation) self._saveOriginals(); // 851
+                                            // 846
+                                            return randomSeedGenerator(); // 846
+                                        } // 846
+                                    }); // 842
+                                    if (!alreadyInSimulation) self._saveOriginals(); // 849
                                     //
                                     try {
-                                        // 854
-                                        // Note that unlike in the corresponding server code, we never audit                                           // 855
-                                        // that stubs check() their arguments.                                                                         // 856
+                                        // 852
+                                        // Note that unlike in the corresponding server code, we never audit                                           // 853
+                                        // that stubs check() their arguments.                                                                         // 854
                                         var stubReturnValue = DDP._CurrentMethodInvocation.withValue(invocation, function () {
-                                            // 857
+                                            // 855
                                             if (Meteor.isServer) {
-                                                // 858
-                                                // Because saveOriginals and retrieveOriginals aren't reentrant,                                           // 859
-                                                // don't allow stubs to yield.                                                                             // 860
+                                                // 856
+                                                // Because saveOriginals and retrieveOriginals aren't reentrant,                                           // 857
+                                                // don't allow stubs to yield.                                                                             // 858
                                                 return Meteor._noYieldsAllowed(function () {
-                                                    // 861
-                                                    // re-clone, so that the stub can't affect our caller's values                                           // 862
-                                                    return stub.apply(invocation, EJSON.clone(args)); // 863
-                                                }); // 864
+                                                    // 859
+                                                    // re-clone, so that the stub can't affect our caller's values                                           // 860
+                                                    return stub.apply(invocation, EJSON.clone(args)); // 861
+                                                }); // 862
                                             } else {
-                                                // 865
-                                                return stub.apply(invocation, EJSON.clone(args)); // 866
-                                            } // 867
-                                        }); // 868
+                                                // 863
+                                                return stub.apply(invocation, EJSON.clone(args)); // 864
+                                            } // 865
+                                        }); // 866
                                     } catch (e) {
-                                        // 869
-                                        var exception = e; // 871
-                                    } // 872
+                                        // 867
+                                        var exception = e; // 869
+                                    } // 870
                                     //
-                                    if (!alreadyInSimulation) self._retrieveAndStoreOriginals(methodId()); // 874
-                                } // If we're in a simulation, stop and return the result we have,                                                 // 876
-                                // rather than going on to do an RPC. If there was no stub,                                                        // 879
-                                // we'll end up returning undefined.                                                                               // 880
+                                    if (!alreadyInSimulation) self._retrieveAndStoreOriginals(methodId()); // 872
+                                } // If we're in a simulation, stop and return the result we have,                                                 // 874
+                                // rather than going on to do an RPC. If there was no stub,                                                        // 877
+                                // we'll end up returning undefined.                                                                               // 878
                                 //
                                 //
                                 if (alreadyInSimulation) {
-                                    // 881
+                                    // 879
                                     if (callback) {
-                                        // 882
-                                        callback(exception, stubReturnValue); // 883
-                                        return undefined; // 884
-                                    } // 885
+                                        // 880
+                                        callback(exception, stubReturnValue); // 881
+                                        return undefined; // 882
+                                    } // 883
                                     //
-                                    if (exception) throw exception; // 886
-                                    return stubReturnValue; // 888
-                                } // If an exception occurred in a stub, and we're ignoring it                                                     // 889
-                                // because we're doing an RPC and want to use what the server                                                      // 892
-                                // returns instead, log it so the developer knows                                                                  // 893
-                                // (unless they explicitly ask to see the error).                                                                  // 894
-                                //                                                                                                                 // 895
-                                // Tests can set the 'expected' flag on an exception so it won't                                                   // 896
-                                // go to log.                                                                                                      // 897
+                                    if (exception) throw exception; // 884
+                                    return stubReturnValue; // 886
+                                } // If an exception occurred in a stub, and we're ignoring it                                                     // 887
+                                // because we're doing an RPC and want to use what the server                                                      // 890
+                                // returns instead, log it so the developer knows                                                                  // 891
+                                // (unless they explicitly ask to see the error).                                                                  // 892
+                                //                                                                                                                 // 893
+                                // Tests can set the 'expected' flag on an exception so it won't                                                   // 894
+                                // go to log.                                                                                                      // 895
                                 //
                                 //
                                 if (exception) {
-                                    // 898
+                                    // 896
                                     if (options.throwStubExceptions) {
-                                        // 899
-                                        throw exception; // 900
+                                        // 897
+                                        throw exception; // 898
                                     } else if (!exception.expected) {
-                                        // 901
+                                        // 899
                                         Meteor._debug("Exception while simulating the effect of invoking '" + name + "'", exception, exception.stack);
-                                    } // 904
-                                } // At this point we're definitely doing an RPC, and we're going to                                               // 905
-                                // return the value of the RPC to the caller.                                                                      // 909
-                                // If the caller didn't give a callback, decide what to do.                                                        // 911
+                                    } // 902
+                                } // At this point we're definitely doing an RPC, and we're going to                                               // 903
+                                // return the value of the RPC to the caller.                                                                      // 907
+                                // If the caller didn't give a callback, decide what to do.                                                        // 909
                                 //
                                 //
                                 if (!callback) {
-                                    // 912
+                                    // 910
                                     if (Meteor.isClient) {
-                                        // 913
-                                        // On the client, we don't have fibers, so we can't block. The                                                 // 914
-                                        // only thing we can do is to return undefined and discard the                                                 // 915
-                                        // result of the RPC. If an error occurred then print the error                                                // 916
-                                        // to the console.                                                                                             // 917
+                                        // 911
+                                        // On the client, we don't have fibers, so we can't block. The                                                 // 912
+                                        // only thing we can do is to return undefined and discard the                                                 // 913
+                                        // result of the RPC. If an error occurred then print the error                                                // 914
+                                        // to the console.                                                                                             // 915
                                         callback = function (err) {
-                                            // 918
-                                            err && Meteor._debug("Error invoking Method '" + name + "':", err.message); // 919
-                                        }; // 921
+                                            // 916
+                                            err && Meteor._debug("Error invoking Method '" + name + "':", err.message); // 917
+                                        }; // 919
                                     } else {
-                                        // 922
-                                        // On the server, make the function synchronous. Throw on                                                      // 923
-                                        // errors, return on success.                                                                                  // 924
-                                        var future = new Future(); // 925
-                                        callback = future.resolver(); // 926
-                                    } // 927
-                                } // Send the RPC. Note that on the client, it is important that the                                               // 928
-                                // stub have finished before we send the RPC, so that we know we have                                              // 930
-                                // a complete list of which local documents the stub wrote.                                                        // 931
+                                        // 920
+                                        // On the server, make the function synchronous. Throw on                                                      // 921
+                                        // errors, return on success.                                                                                  // 922
+                                        var future = new Future(); // 923
+                                        callback = future.resolver(); // 924
+                                    } // 925
+                                } // Send the RPC. Note that on the client, it is important that the                                               // 926
+                                // stub have finished before we send the RPC, so that we know we have                                              // 928
+                                // a complete list of which local documents the stub wrote.                                                        // 929
                                 //
                                 //
-                                var message = { // 932
-                                    msg: 'method', // 933
-                                    method: name, // 934
-                                    params: args, // 935
-                                    id: methodId() // 936
-                                }; // Send the randomSeed only if we used it                                                                       // 932
+                                var message = { // 930
+                                    msg: 'method', // 931
+                                    method: name, // 932
+                                    params: args, // 933
+                                    id: methodId() // 934
+                                }; // Send the randomSeed only if we used it                                                                       // 930
                                 //
                                 if (randomSeed !== null) {
-                                    // 940
-                                    message.randomSeed = randomSeed; // 941
-                                } // 942
+                                    // 938
+                                    message.randomSeed = randomSeed; // 939
+                                } // 940
                                 //
-                                var methodInvoker = new MethodInvoker({ // 944
-                                    methodId: methodId(), // 945
-                                    callback: callback, // 946
-                                    connection: self, // 947
-                                    onResultReceived: options.onResultReceived, // 948
-                                    wait: !!options.wait, // 949
-                                    message: message, // 950
-                                    noRetry: !!options.noRetry // 951
-                                }); // 944
+                                var methodInvoker = new MethodInvoker({ // 942
+                                    methodId: methodId(), // 943
+                                    callback: callback, // 944
+                                    connection: self, // 945
+                                    onResultReceived: options.onResultReceived, // 946
+                                    wait: !!options.wait, // 947
+                                    message: message, // 948
+                                    noRetry: !!options.noRetry // 949
+                                }); // 942
                                 //
                                 if (options.wait) {
-                                    // 954
-                                    // It's a wait method! Wait methods go in their own block.                                                       // 955
-                                    self._outstandingMethodBlocks.push({ // 956
-                                        wait: true, // 957
-                                        methods: [methodInvoker] // 957
-                                    }); // 957
+                                    // 952
+                                    // It's a wait method! Wait methods go in their own block.                                                       // 953
+                                    self._outstandingMethodBlocks.push({ // 954
+                                        wait: true, // 955
+                                        methods: [methodInvoker] // 955
+                                    }); // 955
                                 } else {
-                                    // 958
-                                    // Not a wait method. Start a new block if the previous block was a wait                                         // 959
-                                    // block, and add it to the last block of methods.                                                               // 960
+                                    // 956
+                                    // Not a wait method. Start a new block if the previous block was a wait                                         // 957
+                                    // block, and add it to the last block of methods.                                                               // 958
                                     if (_.isEmpty(self._outstandingMethodBlocks) || _.last(self._outstandingMethodBlocks).wait) self._outstandingMethodBlocks.push({
-                                        wait: false, // 963
-                                        methods: [] // 963
-                                    }); // 963
+                                        wait: false, // 961
+                                        methods: [] // 961
+                                    }); // 961
                                     //
-                                    _.last(self._outstandingMethodBlocks).methods.push(methodInvoker); // 964
-                                } // If we added it to the first block, send it out now.                                                           // 965
+                                    _.last(self._outstandingMethodBlocks).methods.push(methodInvoker); // 962
+                                } // If we added it to the first block, send it out now.                                                           // 963
                                 //
                                 //
                                 if (self._outstandingMethodBlocks.length === 1) methodInvoker.sendMessage(); // If we're using the default callback on the server,
-                                // block waiting for the result.                                                                                   // 972
+                                // block waiting for the result.                                                                                   // 970
                                 //
                                 if (future) {
-                                    // 973
-                                    return future.wait(); // 974
-                                } // 975
+                                    // 971
+                                    return future.wait(); // 972
+                                } // 973
                                 //
-                                return options.returnStubValue ? stubReturnValue : undefined; // 976
-                            }, // 977
-                            // Before calling a method stub, prepare all stores to track changes and allow                                       // 979
-                            // _retrieveAndStoreOriginals to get the original versions of changed                                                // 980
-                            // documents.                                                                                                        // 981
+                                return options.returnStubValue ? stubReturnValue : undefined; // 974
+                            }, // 975
+                            // Before calling a method stub, prepare all stores to track changes and allow                                       // 977
+                            // _retrieveAndStoreOriginals to get the original versions of changed                                                // 978
+                            // documents.                                                                                                        // 979
                             _saveOriginals: function () {
-                                // 982
-                                var self = this; // 983
-                                if (!self._waitingForQuiescence()) self._flushBufferedWrites(); // 984
+                                // 980
+                                var self = this; // 981
+                                if (!self._waitingForQuiescence()) self._flushBufferedWrites(); // 982
                                 //
                                 _.each(self._stores, function (s) {
-                                    // 986
-                                    s.saveOriginals(); // 987
-                                }); // 988
-                            }, // 989
-                            // Retrieves the original versions of all documents modified by the stub for                                         // 990
-                            // method 'methodId' from all stores and saves them to _serverDocuments (keyed                                       // 991
-                            // by document) and _documentsWrittenByStub (keyed by method ID).                                                    // 992
+                                    // 984
+                                    s.saveOriginals(); // 985
+                                }); // 986
+                            }, // 987
+                            // Retrieves the original versions of all documents modified by the stub for                                         // 988
+                            // method 'methodId' from all stores and saves them to _serverDocuments (keyed                                       // 989
+                            // by document) and _documentsWrittenByStub (keyed by method ID).                                                    // 990
                             _retrieveAndStoreOriginals: function (methodId) {
-                                // 993
-                                var self = this; // 994
-                                if (self._documentsWrittenByStub[methodId]) throw new Error("Duplicate methodId in _retrieveAndStoreOriginals"); // 995
-                                var docsWritten = []; // 998
+                                // 991
+                                var self = this; // 992
+                                if (self._documentsWrittenByStub[methodId]) throw new Error("Duplicate methodId in _retrieveAndStoreOriginals"); // 993
+                                var docsWritten = []; // 996
                                 //
                                 _.each(self._stores, function (s, collection) {
-                                    // 999
-                                    var originals = s.retrieveOriginals(); // not all stores define retrieveOriginals                                // 1000
+                                    // 997
+                                    var originals = s.retrieveOriginals(); // not all stores define retrieveOriginals                                // 998
                                     //
-                                    if (!originals) return; // 1002
+                                    if (!originals) return; // 1000
                                     originals.forEach(function (doc, id) {
-                                        // 1004
-                                        docsWritten.push({ // 1005
-                                            collection: collection, // 1005
-                                            id: id // 1005
-                                        }); // 1005
-                                        if (!_.has(self._serverDocuments, collection)) self._serverDocuments[collection] = new MongoIDMap(); // 1006
+                                        // 1002
+                                        docsWritten.push({ // 1003
+                                            collection: collection, // 1003
+                                            id: id // 1003
+                                        }); // 1003
+                                        if (!_.has(self._serverDocuments, collection)) self._serverDocuments[collection] = new MongoIDMap(); // 1004
                                         //
-                                        var serverDoc = self._serverDocuments[collection].setDefault(id, {}); // 1008
+                                        var serverDoc = self._serverDocuments[collection].setDefault(id, {}); // 1006
                                         //
                                         if (serverDoc.writtenByStubs) {
-                                            // 1009
-                                            // We're not the first stub to write this doc. Just add our method ID                                        // 1010
-                                            // to the record.                                                                                            // 1011
-                                            serverDoc.writtenByStubs[methodId] = true; // 1012
+                                            // 1007
+                                            // We're not the first stub to write this doc. Just add our method ID                                        // 1008
+                                            // to the record.                                                                                            // 1009
+                                            serverDoc.writtenByStubs[methodId] = true; // 1010
                                         } else {
-                                            // 1013
-                                            // First stub! Save the original value and our method ID.                                                    // 1014
-                                            serverDoc.document = doc; // 1015
-                                            serverDoc.flushCallbacks = []; // 1016
-                                            serverDoc.writtenByStubs = {}; // 1017
-                                            serverDoc.writtenByStubs[methodId] = true; // 1018
-                                        } // 1019
-                                    }); // 1020
-                                }); // 1021
+                                            // 1011
+                                            // First stub! Save the original value and our method ID.                                                    // 1012
+                                            serverDoc.document = doc; // 1013
+                                            serverDoc.flushCallbacks = []; // 1014
+                                            serverDoc.writtenByStubs = {}; // 1015
+                                            serverDoc.writtenByStubs[methodId] = true; // 1016
+                                        } // 1017
+                                    }); // 1018
+                                }); // 1019
                                 //
                                 if (!_.isEmpty(docsWritten)) {
-                                    // 1022
-                                    self._documentsWrittenByStub[methodId] = docsWritten; // 1023
-                                } // 1024
-                            }, // 1025
-                            // This is very much a private function we use to make the tests                                                     // 1027
-                            // take up fewer server resources after they complete.                                                               // 1028
+                                    // 1020
+                                    self._documentsWrittenByStub[methodId] = docsWritten; // 1021
+                                } // 1022
+                            }, // 1023
+                            // This is very much a private function we use to make the tests                                                     // 1025
+                            // take up fewer server resources after they complete.                                                               // 1026
                             _unsubscribeAll: function () {
-                                // 1029
-                                var self = this; // 1030
+                                // 1027
+                                var self = this; // 1028
                                 //
                                 _.each(_.clone(self._subscriptions), function (sub, id) {
-                                    // 1031
-                                    // Avoid killing the autoupdate subscription so that developers                                                  // 1032
-                                    // still get hot code pushes when writing tests.                                                                 // 1033
-                                    //                                                                                                               // 1034
-                                    // XXX it's a hack to encode knowledge about autoupdate here,                                                    // 1035
-                                    // but it doesn't seem worth it yet to have a special API for                                                    // 1036
-                                    // subscriptions to preserve after unit tests.                                                                   // 1037
+                                    // 1029
+                                    // Avoid killing the autoupdate subscription so that developers                                                  // 1030
+                                    // still get hot code pushes when writing tests.                                                                 // 1031
+                                    //                                                                                                               // 1032
+                                    // XXX it's a hack to encode knowledge about autoupdate here,                                                    // 1033
+                                    // but it doesn't seem worth it yet to have a special API for                                                    // 1034
+                                    // subscriptions to preserve after unit tests.                                                                   // 1035
                                     if (sub.name !== 'meteor_autoupdate_clientVersions') {
-                                        // 1038
-                                        self._subscriptions[id].stop(); // 1039
-                                    } // 1040
-                                }); // 1041
-                            }, // 1042
-                            // Sends the DDP stringification of the given message object                                                         // 1044
+                                        // 1036
+                                        self._subscriptions[id].stop(); // 1037
+                                    } // 1038
+                                }); // 1039
+                            }, // 1040
+                            // Sends the DDP stringification of the given message object                                                         // 1042
                             _send: function (obj) {
-                                // 1045
-                                var self = this; // 1046
+                                // 1043
+                                var self = this; // 1044
                                 //
-                                self._stream.send(DDPCommon.stringifyDDP(obj)); // 1047
-                            }, // 1048
-                            // We detected via DDP-level heartbeats that we've lost the                                                          // 1050
-                            // connection.  Unlike `disconnect` or `close`, a lost connection                                                    // 1051
-                            // will be automatically retried.                                                                                    // 1052
+                                self._stream.send(DDPCommon.stringifyDDP(obj)); // 1045
+                            }, // 1046
+                            // We detected via DDP-level heartbeats that we've lost the                                                          // 1048
+                            // connection.  Unlike `disconnect` or `close`, a lost connection                                                    // 1049
+                            // will be automatically retried.                                                                                    // 1050
                             _lostConnection: function (error) {
-                                // 1053
-                                var self = this; // 1054
+                                // 1051
+                                var self = this; // 1052
                                 //
-                                self._stream._lostConnection(error); // 1055
-                            }, // 1056
-                            /**                                                                                                                  // 1058
+                                self._stream._lostConnection(error); // 1053
+                            }, // 1054
+                            /**                                                                                                                  // 1056
                              * @summary Get the current connection status. A reactive data source.                                               //
                              * @locus Client                                                                                                     //
                              * @memberOf Meteor                                                                                                  //
                              * @importFromPackage meteor                                                                                         //
                              */status: function () /*passthrough args*/{
                                 //
-                                var self = this; // 1065
-                                return self._stream.status.apply(self._stream, arguments); // 1066
-                            }, // 1067
-                            /**                                                                                                                  // 1069
+                                var self = this; // 1063
+                                return self._stream.status.apply(self._stream, arguments); // 1064
+                            }, // 1065
+                            /**                                                                                                                  // 1067
                              * @summary Force an immediate reconnection attempt if the client is not connected to the server.                    //
                              This method does nothing if the client is already connected.                                                        //
                              * @locus Client                                                                                                     //
@@ -25805,766 +26007,790 @@ __meteor_runtime_config__ = {
                              * @importFromPackage meteor                                                                                         //
                              */reconnect: function () /*passthrough args*/{
                                 //
-                                var self = this; // 1078
-                                return self._stream.reconnect.apply(self._stream, arguments); // 1079
-                            }, // 1080
-                            /**                                                                                                                  // 1082
+                                var self = this; // 1076
+                                return self._stream.reconnect.apply(self._stream, arguments); // 1077
+                            }, // 1078
+                            /**                                                                                                                  // 1080
                              * @summary Disconnect the client from the server.                                                                   //
                              * @locus Client                                                                                                     //
                              * @memberOf Meteor                                                                                                  //
                              * @importFromPackage meteor                                                                                         //
                              */disconnect: function () /*passthrough args*/{
                                 //
-                                var self = this; // 1089
-                                return self._stream.disconnect.apply(self._stream, arguments); // 1090
-                            }, // 1091
+                                var self = this; // 1087
+                                return self._stream.disconnect.apply(self._stream, arguments); // 1088
+                            }, // 1089
                             close: function () {
-                                // 1093
-                                var self = this; // 1094
-                                return self._stream.disconnect({ // 1095
-                                    _permanent: true // 1095
-                                }); // 1095
-                            }, // 1096
+                                // 1091
+                                var self = this; // 1092
+                                return self._stream.disconnect({ // 1093
+                                    _permanent: true // 1093
+                                }); // 1093
+                            }, // 1094
+                            ///                                                                                                                  // 1096
+                            /// Reactive user system                                                                                             // 1097
                             ///                                                                                                                  // 1098
-                            /// Reactive user system                                                                                             // 1099
-                            ///                                                                                                                  // 1100
                             userId: function () {
-                                // 1101
-                                var self = this; // 1102
-                                if (self._userIdDeps) self._userIdDeps.depend(); // 1103
-                                return self._userId; // 1105
-                            }, // 1106
+                                // 1099
+                                var self = this; // 1100
+                                if (self._userIdDeps) self._userIdDeps.depend(); // 1101
+                                return self._userId; // 1103
+                            }, // 1104
                             setUserId: function (userId) {
-                                // 1108
-                                var self = this; // Avoid invalidating dependents if setUserId is called with current value.                       // 1109
+                                // 1106
+                                var self = this; // Avoid invalidating dependents if setUserId is called with current value.                       // 1107
                                 //
-                                if (self._userId === userId) return; // 1111
-                                self._userId = userId; // 1113
-                                if (self._userIdDeps) self._userIdDeps.changed(); // 1114
-                            }, // 1116
-                            // Returns true if we are in a state after reconnect of waiting for subs to be                                       // 1118
-                            // revived or early methods to finish their data, or we are waiting for a                                            // 1119
-                            // "wait" method to finish.                                                                                          // 1120
+                                if (self._userId === userId) return; // 1109
+                                self._userId = userId; // 1111
+                                if (self._userIdDeps) self._userIdDeps.changed(); // 1112
+                            }, // 1114
+                            // Returns true if we are in a state after reconnect of waiting for subs to be                                       // 1116
+                            // revived or early methods to finish their data, or we are waiting for a                                            // 1117
+                            // "wait" method to finish.                                                                                          // 1118
                             _waitingForQuiescence: function () {
-                                // 1121
-                                var self = this; // 1122
-                                return !_.isEmpty(self._subsBeingRevived) || !_.isEmpty(self._methodsBlockingQuiescence); // 1123
-                            }, // 1125
-                            // Returns true if any method whose message has been sent to the server has                                          // 1127
-                            // not yet invoked its user callback.                                                                                // 1128
+                                // 1119
+                                var self = this; // 1120
+                                return !_.isEmpty(self._subsBeingRevived) || !_.isEmpty(self._methodsBlockingQuiescence); // 1121
+                            }, // 1123
+                            // Returns true if any method whose message has been sent to the server has                                          // 1125
+                            // not yet invoked its user callback.                                                                                // 1126
                             _anyMethodsAreOutstanding: function () {
-                                // 1129
-                                var self = this; // 1130
-                                return _.any(_.pluck(self._methodInvokers, 'sentMessage')); // 1131
-                            }, // 1132
+                                // 1127
+                                var self = this; // 1128
+                                return _.any(_.pluck(self._methodInvokers, 'sentMessage')); // 1129
+                            }, // 1130
                             _livedata_connected: function (msg) {
-                                // 1134
-                                var self = this; // 1135
+                                // 1132
+                                var self = this; // 1133
                                 //
                                 if (self._version !== 'pre1' && self._heartbeatInterval !== 0) {
-                                    // 1137
-                                    self._heartbeat = new DDPCommon.Heartbeat({ // 1138
-                                        heartbeatInterval: self._heartbeatInterval, // 1139
-                                        heartbeatTimeout: self._heartbeatTimeout, // 1140
+                                    // 1135
+                                    self._heartbeat = new DDPCommon.Heartbeat({ // 1136
+                                        heartbeatInterval: self._heartbeatInterval, // 1137
+                                        heartbeatTimeout: self._heartbeatTimeout, // 1138
                                         onTimeout: function () {
-                                            // 1141
-                                            self._lostConnection(new DDP.ConnectionError("DDP heartbeat timed out")); // 1142
-                                        }, // 1144
+                                            // 1139
+                                            self._lostConnection(new DDP.ConnectionError("DDP heartbeat timed out")); // 1140
+                                        }, // 1142
                                         sendPing: function () {
-                                            // 1145
-                                            self._send({ // 1146
-                                                msg: 'ping' // 1146
-                                            }); // 1146
-                                        } // 1147
-                                    }); // 1138
+                                            // 1143
+                                            self._send({ // 1144
+                                                msg: 'ping' // 1144
+                                            }); // 1144
+                                        } // 1145
+                                    }); // 1136
                                     //
-                                    self._heartbeat.start(); // 1149
-                                } // If this is a reconnect, we'll have to reset all stores.                                                       // 1150
+                                    self._heartbeat.start(); // 1147
+                                } // If this is a reconnect, we'll have to reset all stores.                                                       // 1148
                                 //
                                 //
-                                if (self._lastSessionId) self._resetStores = true; // 1153
+                                if (self._lastSessionId) self._resetStores = true; // 1151
                                 //
                                 if (typeof msg.session === "string") {
-                                    // 1156
-                                    var reconnectedToPreviousSession = self._lastSessionId === msg.session; // 1157
-                                    self._lastSessionId = msg.session; // 1158
-                                } // 1159
+                                    // 1154
+                                    var reconnectedToPreviousSession = self._lastSessionId === msg.session; // 1155
+                                    self._lastSessionId = msg.session; // 1156
+                                } // 1157
                                 //
                                 if (reconnectedToPreviousSession) {
-                                    // 1161
-                                    // Successful reconnection -- pick up where we left off.  Note that right                                        // 1162
-                                    // now, this never happens: the server never connects us to a previous                                           // 1163
-                                    // session, because DDP doesn't provide enough data for the server to know                                       // 1164
-                                    // what messages the client has processed. We need to improve DDP to make                                        // 1165
-                                    // this possible, at which point we'll probably need more code here.                                             // 1166
-                                    return; // 1167
-                                } // Server doesn't have our data any more. Re-sync a new session.                                                 // 1168
-                                // Forget about messages we were buffering for unknown collections. They'll                                        // 1172
-                                // be resent if still relevant.                                                                                    // 1173
+                                    // 1159
+                                    // Successful reconnection -- pick up where we left off.  Note that right                                        // 1160
+                                    // now, this never happens: the server never connects us to a previous                                           // 1161
+                                    // session, because DDP doesn't provide enough data for the server to know                                       // 1162
+                                    // what messages the client has processed. We need to improve DDP to make                                        // 1163
+                                    // this possible, at which point we'll probably need more code here.                                             // 1164
+                                    return; // 1165
+                                } // Server doesn't have our data any more. Re-sync a new session.                                                 // 1166
+                                // Forget about messages we were buffering for unknown collections. They'll                                        // 1170
+                                // be resent if still relevant.                                                                                    // 1171
                                 //
                                 //
-                                self._updatesForUnknownStores = {}; // 1174
+                                self._updatesForUnknownStores = {}; // 1172
                                 //
                                 if (self._resetStores) {
-                                    // 1176
-                                    // Forget about the effects of stubs. We'll be resetting all collections                                         // 1177
-                                    // anyway.                                                                                                       // 1178
-                                    self._documentsWrittenByStub = {}; // 1179
-                                    self._serverDocuments = {}; // 1180
-                                } // Clear _afterUpdateCallbacks.                                                                                  // 1181
+                                    // 1174
+                                    // Forget about the effects of stubs. We'll be resetting all collections                                         // 1175
+                                    // anyway.                                                                                                       // 1176
+                                    self._documentsWrittenByStub = {}; // 1177
+                                    self._serverDocuments = {}; // 1178
+                                } // Clear _afterUpdateCallbacks.                                                                                  // 1179
                                 //
                                 //
-                                self._afterUpdateCallbacks = []; // Mark all named subscriptions which are ready (ie, we already called the        // 1184
-                                // ready callback) as needing to be revived.                                                                       // 1187
-                                // XXX We should also block reconnect quiescence until unnamed subscriptions                                       // 1188
-                                //     (eg, autopublish) are done re-publishing to avoid flicker!                                                  // 1189
+                                self._afterUpdateCallbacks = []; // Mark all named subscriptions which are ready (ie, we already called the        // 1182
+                                // ready callback) as needing to be revived.                                                                       // 1185
+                                // XXX We should also block reconnect quiescence until unnamed subscriptions                                       // 1186
+                                //     (eg, autopublish) are done re-publishing to avoid flicker!                                                  // 1187
                                 //
-                                self._subsBeingRevived = {}; // 1190
+                                self._subsBeingRevived = {}; // 1188
                                 //
                                 _.each(self._subscriptions, function (sub, id) {
-                                    // 1191
-                                    if (sub.ready) self._subsBeingRevived[id] = true; // 1192
-                                }); // Arrange for "half-finished" methods to have their callbacks run, and                                        // 1194
-                                // track methods that were sent on this connection so that we don't                                                // 1197
-                                // quiesce until they are all done.                                                                                // 1198
-                                //                                                                                                                 // 1199
-                                // Start by clearing _methodsBlockingQuiescence: methods sent before                                               // 1200
-                                // reconnect don't matter, and any "wait" methods sent on the new connection                                       // 1201
-                                // that we drop here will be restored by the loop below.                                                           // 1202
+                                    // 1189
+                                    if (sub.ready) self._subsBeingRevived[id] = true; // 1190
+                                }); // Arrange for "half-finished" methods to have their callbacks run, and                                        // 1192
+                                // track methods that were sent on this connection so that we don't                                                // 1195
+                                // quiesce until they are all done.                                                                                // 1196
+                                //                                                                                                                 // 1197
+                                // Start by clearing _methodsBlockingQuiescence: methods sent before                                               // 1198
+                                // reconnect don't matter, and any "wait" methods sent on the new connection                                       // 1199
+                                // that we drop here will be restored by the loop below.                                                           // 1200
                                 //
                                 //
-                                self._methodsBlockingQuiescence = {}; // 1203
+                                self._methodsBlockingQuiescence = {}; // 1201
                                 //
                                 if (self._resetStores) {
-                                    // 1204
+                                    // 1202
                                     _.each(self._methodInvokers, function (invoker) {
-                                        // 1205
+                                        // 1203
                                         if (invoker.gotResult()) {
-                                            // 1206
-                                            // This method already got its result, but it didn't call its callback                                       // 1207
-                                            // because its data didn't become visible. We did not resend the                                             // 1208
-                                            // method RPC. We'll call its callback when we get a full quiesce,                                           // 1209
-                                            // since that's as close as we'll get to "data must be visible".                                             // 1210
-                                            self._afterUpdateCallbacks.push(_.bind(invoker.dataVisible, invoker)); // 1211
+                                            // 1204
+                                            // This method already got its result, but it didn't call its callback                                       // 1205
+                                            // because its data didn't become visible. We did not resend the                                             // 1206
+                                            // method RPC. We'll call its callback when we get a full quiesce,                                           // 1207
+                                            // since that's as close as we'll get to "data must be visible".                                             // 1208
+                                            self._afterUpdateCallbacks.push(_.bind(invoker.dataVisible, invoker)); // 1209
                                         } else if (invoker.sentMessage) {
-                                            // 1212
-                                            // This method has been sent on this connection (maybe as a resend                                           // 1213
-                                            // from the last connection, maybe from onReconnect, maybe just very                                         // 1214
-                                            // quickly before processing the connected message).                                                         // 1215
-                                            //                                                                                                           // 1216
-                                            // We don't need to do anything special to ensure its callbacks get                                          // 1217
-                                            // called, but we'll count it as a method which is preventing                                                // 1218
-                                            // reconnect quiescence. (eg, it might be a login method that was run                                        // 1219
-                                            // from onReconnect, and we don't want to see flicker by seeing a                                            // 1220
-                                            // logged-out state.)                                                                                        // 1221
-                                            self._methodsBlockingQuiescence[invoker.methodId] = true; // 1222
-                                        } // 1223
-                                    }); // 1224
-                                } // 1225
+                                            // 1210
+                                            // This method has been sent on this connection (maybe as a resend                                           // 1211
+                                            // from the last connection, maybe from onReconnect, maybe just very                                         // 1212
+                                            // quickly before processing the connected message).                                                         // 1213
+                                            //                                                                                                           // 1214
+                                            // We don't need to do anything special to ensure its callbacks get                                          // 1215
+                                            // called, but we'll count it as a method which is preventing                                                // 1216
+                                            // reconnect quiescence. (eg, it might be a login method that was run                                        // 1217
+                                            // from onReconnect, and we don't want to see flicker by seeing a                                            // 1218
+                                            // logged-out state.)                                                                                        // 1219
+                                            self._methodsBlockingQuiescence[invoker.methodId] = true; // 1220
+                                        } // 1221
+                                    }); // 1222
+                                } // 1223
                                 //
                                 self._messagesBufferedUntilQuiescence = []; // If we're not waiting on any methods or subs, we can reset the stores and
-                                // call the callbacks immediately.                                                                                 // 1230
+                                // call the callbacks immediately.                                                                                 // 1228
                                 //
                                 if (!self._waitingForQuiescence()) {
-                                    // 1231
+                                    // 1229
                                     if (self._resetStores) {
-                                        // 1232
+                                        // 1230
                                         _.each(self._stores, function (s) {
-                                            // 1233
-                                            s.beginUpdate(0, true); // 1234
-                                            s.endUpdate(); // 1235
-                                        }); // 1236
+                                            // 1231
+                                            s.beginUpdate(0, true); // 1232
+                                            s.endUpdate(); // 1233
+                                        }); // 1234
                                         //
-                                        self._resetStores = false; // 1237
-                                    } // 1238
+                                        self._resetStores = false; // 1235
+                                    } // 1236
                                     //
-                                    self._runAfterUpdateCallbacks(); // 1239
-                                } // 1240
-                            }, // 1241
+                                    self._runAfterUpdateCallbacks(); // 1237
+                                } // 1238
+                            }, // 1239
                             _processOneDataMessage: function (msg, updates) {
-                                // 1244
-                                var self = this; // Using underscore here so as not to need to capitalize.                                         // 1245
+                                // 1242
+                                var self = this; // Using underscore here so as not to need to capitalize.                                         // 1243
                                 //
-                                self['_process_' + msg.msg](msg, updates); // 1247
-                            }, // 1248
+                                self['_process_' + msg.msg](msg, updates); // 1245
+                            }, // 1246
                             _livedata_data: function (msg) {
-                                // 1251
-                                var self = this; // 1252
+                                // 1249
+                                var self = this; // 1250
                                 //
                                 if (self._waitingForQuiescence()) {
-                                    // 1254
-                                    self._messagesBufferedUntilQuiescence.push(msg); // 1255
+                                    // 1252
+                                    self._messagesBufferedUntilQuiescence.push(msg); // 1253
                                     //
-                                    if (msg.msg === "nosub") delete self._subsBeingRevived[msg.id]; // 1257
+                                    if (msg.msg === "nosub") delete self._subsBeingRevived[msg.id]; // 1255
                                     //
                                     _.each(msg.subs || [], function (subId) {
-                                        // 1260
-                                        delete self._subsBeingRevived[subId]; // 1261
-                                    }); // 1262
+                                        // 1258
+                                        delete self._subsBeingRevived[subId]; // 1259
+                                    }); // 1260
                                     //
                                     _.each(msg.methods || [], function (methodId) {
-                                        // 1263
-                                        delete self._methodsBlockingQuiescence[methodId]; // 1264
-                                    }); // 1265
+                                        // 1261
+                                        delete self._methodsBlockingQuiescence[methodId]; // 1262
+                                    }); // 1263
                                     //
-                                    if (self._waitingForQuiescence()) return; // No methods or subs are blocking quiescence!                         // 1267
-                                    // We'll now process and all of our buffered messages, reset all stores,                                         // 1271
-                                    // and apply them all at once.                                                                                   // 1272
+                                    if (self._waitingForQuiescence()) return; // No methods or subs are blocking quiescence!                         // 1265
+                                    // We'll now process and all of our buffered messages, reset all stores,                                         // 1269
+                                    // and apply them all at once.                                                                                   // 1270
                                     //
                                     _.each(self._messagesBufferedUntilQuiescence, function (bufferedMsg) {
-                                        // 1273
-                                        self._processOneDataMessage(bufferedMsg, self._bufferedWrites); // 1274
-                                    }); // 1275
+                                        // 1271
+                                        self._processOneDataMessage(bufferedMsg, self._bufferedWrites); // 1272
+                                    }); // 1273
                                     //
-                                    self._messagesBufferedUntilQuiescence = []; // 1276
+                                    self._messagesBufferedUntilQuiescence = []; // 1274
                                 } else {
-                                    // 1277
-                                    self._processOneDataMessage(msg, self._bufferedWrites); // 1278
-                                } // Immediately flush writes when:                                                                                // 1279
-                                //  1. Buffering is disabled. Or;                                                                                  // 1282
-                                //  2. any non-(added/changed/removed) message arrives.                                                            // 1283
+                                    // 1275
+                                    self._processOneDataMessage(msg, self._bufferedWrites); // 1276
+                                } // Immediately flush writes when:                                                                                // 1277
+                                //  1. Buffering is disabled. Or;                                                                                  // 1280
+                                //  2. any non-(added/changed/removed) message arrives.                                                            // 1281
                                 //
                                 //
-                                var standardWrite = _.include(['added', 'changed', 'removed'], msg.msg); // 1284
+                                var standardWrite = _.include(['added', 'changed', 'removed'], msg.msg); // 1282
                                 //
                                 if (self._bufferedWritesInterval === 0 || !standardWrite) {
-                                    // 1285
-                                    self._flushBufferedWrites(); // 1286
+                                    // 1283
+                                    self._flushBufferedWrites(); // 1284
                                     //
-                                    return; // 1287
-                                } // 1288
+                                    return; // 1285
+                                } // 1286
                                 //
                                 if (self._bufferedWritesFlushAt === null) {
-                                    // 1290
-                                    self._bufferedWritesFlushAt = new Date().valueOf() + self._bufferedWritesMaxAge; // 1291
+                                    // 1288
+                                    self._bufferedWritesFlushAt = new Date().valueOf() + self._bufferedWritesMaxAge; // 1289
                                 } else if (self._bufferedWritesFlushAt < new Date().valueOf()) {
-                                    // 1292
-                                    self._flushBufferedWrites(); // 1294
+                                    // 1290
+                                    self._flushBufferedWrites(); // 1292
                                     //
-                                    return; // 1295
-                                } // 1296
+                                    return; // 1293
+                                } // 1294
                                 //
                                 if (self._bufferedWritesFlushHandle) {
-                                    // 1298
-                                    clearTimeout(self._bufferedWritesFlushHandle); // 1299
-                                } // 1300
+                                    // 1296
+                                    clearTimeout(self._bufferedWritesFlushHandle); // 1297
+                                } // 1298
                                 //
-                                self._bufferedWritesFlushHandle = setTimeout(self.__flushBufferedWrites, self._bufferedWritesInterval); // 1301
-                            }, // 1303
+                                self._bufferedWritesFlushHandle = setTimeout(self.__flushBufferedWrites, self._bufferedWritesInterval); // 1299
+                            }, // 1301
                             _flushBufferedWrites: function () {
-                                // 1305
-                                var self = this; // 1306
+                                // 1303
+                                var self = this; // 1304
                                 //
                                 if (self._bufferedWritesFlushHandle) {
-                                    // 1307
-                                    clearTimeout(self._bufferedWritesFlushHandle); // 1308
-                                    self._bufferedWritesFlushHandle = null; // 1309
-                                } // 1310
+                                    // 1305
+                                    clearTimeout(self._bufferedWritesFlushHandle); // 1306
+                                    self._bufferedWritesFlushHandle = null; // 1307
+                                } // 1308
                                 //
-                                self._bufferedWritesFlushAt = null; // We need to clear the buffer before passing it to                            // 1312
-                                //  performWrites. As there's no guarantee that it                                                                 // 1314
-                                //  will exit cleanly.                                                                                             // 1315
+                                self._bufferedWritesFlushAt = null; // We need to clear the buffer before passing it to                            // 1310
+                                //  performWrites. As there's no guarantee that it                                                                 // 1312
+                                //  will exit cleanly.                                                                                             // 1313
                                 //
-                                var writes = self._bufferedWrites; // 1316
-                                self._bufferedWrites = {}; // 1317
+                                var writes = self._bufferedWrites; // 1314
+                                self._bufferedWrites = {}; // 1315
                                 //
-                                self._performWrites(writes); // 1318
-                            }, // 1319
+                                self._performWrites(writes); // 1316
+                            }, // 1317
                             _performWrites: function (updates) {
-                                // 1321
-                                var self = this; // 1322
+                                // 1319
+                                var self = this; // 1320
                                 //
                                 if (self._resetStores || !_.isEmpty(updates)) {
-                                    // 1324
-                                    // Begin a transactional update of each store.                                                                   // 1325
+                                    // 1322
+                                    // Begin a transactional update of each store.                                                                   // 1323
                                     _.each(self._stores, function (s, storeName) {
-                                        // 1326
-                                        s.beginUpdate(_.has(updates, storeName) ? updates[storeName].length : 0, self._resetStores); // 1327
-                                    }); // 1329
+                                        // 1324
+                                        s.beginUpdate(_.has(updates, storeName) ? updates[storeName].length : 0, self._resetStores); // 1325
+                                    }); // 1327
                                     //
-                                    self._resetStores = false; // 1330
+                                    self._resetStores = false; // 1328
                                     //
                                     _.each(updates, function (updateMessages, storeName) {
-                                        // 1332
-                                        var store = self._stores[storeName]; // 1333
+                                        // 1330
+                                        var store = self._stores[storeName]; // 1331
                                         //
                                         if (store) {
-                                            // 1334
+                                            // 1332
                                             _.each(updateMessages, function (updateMessage) {
-                                                // 1335
-                                                store.update(updateMessage); // 1336
-                                            }); // 1337
+                                                // 1333
+                                                store.update(updateMessage); // 1334
+                                            }); // 1335
                                         } else {
-                                            // 1338
-                                            // Nobody's listening for this data. Queue it up until                                                       // 1339
-                                            // someone wants it.                                                                                         // 1340
-                                            // XXX memory use will grow without bound if you forget to                                                   // 1341
-                                            // create a collection or just don't care about it... going                                                  // 1342
-                                            // to have to do something about that.                                                                       // 1343
-                                            if (!_.has(self._updatesForUnknownStores, storeName)) self._updatesForUnknownStores[storeName] = []; // 1344
-                                            Array.prototype.push.apply(self._updatesForUnknownStores[storeName], updateMessages); // 1346
-                                        } // 1348
-                                    }); // End update transaction.                                                                                   // 1349
+                                            // 1336
+                                            // Nobody's listening for this data. Queue it up until                                                       // 1337
+                                            // someone wants it.                                                                                         // 1338
+                                            // XXX memory use will grow without bound if you forget to                                                   // 1339
+                                            // create a collection or just don't care about it... going                                                  // 1340
+                                            // to have to do something about that.                                                                       // 1341
+                                            if (!_.has(self._updatesForUnknownStores, storeName)) self._updatesForUnknownStores[storeName] = []; // 1342
+                                            Array.prototype.push.apply(self._updatesForUnknownStores[storeName], updateMessages); // 1344
+                                        } // 1346
+                                    }); // End update transaction.                                                                                   // 1347
                                     //
                                     //
                                     _.each(self._stores, function (s) {
-                                        // 1352
-                                        s.endUpdate(); // 1352
-                                    }); // 1352
-                                } // 1353
+                                        // 1350
+                                        s.endUpdate(); // 1350
+                                    }); // 1350
+                                } // 1351
                                 //
-                                self._runAfterUpdateCallbacks(); // 1355
-                            }, // 1356
-                            // Call any callbacks deferred with _runWhenAllServerDocsAreFlushed whose                                            // 1358
-                            // relevant docs have been flushed, as well as dataVisible callbacks at                                              // 1359
-                            // reconnect-quiescence time.                                                                                        // 1360
+                                self._runAfterUpdateCallbacks(); // 1353
+                            }, // 1354
+                            // Call any callbacks deferred with _runWhenAllServerDocsAreFlushed whose                                            // 1356
+                            // relevant docs have been flushed, as well as dataVisible callbacks at                                              // 1357
+                            // reconnect-quiescence time.                                                                                        // 1358
                             _runAfterUpdateCallbacks: function () {
-                                // 1361
-                                var self = this; // 1362
-                                var callbacks = self._afterUpdateCallbacks; // 1363
-                                self._afterUpdateCallbacks = []; // 1364
+                                // 1359
+                                var self = this; // 1360
+                                var callbacks = self._afterUpdateCallbacks; // 1361
+                                self._afterUpdateCallbacks = []; // 1362
                                 //
                                 _.each(callbacks, function (c) {
-                                    // 1365
-                                    c(); // 1366
-                                }); // 1367
-                            }, // 1368
+                                    // 1363
+                                    c(); // 1364
+                                }); // 1365
+                            }, // 1366
                             _pushUpdate: function (updates, collection, msg) {
-                                // 1370
-                                var self = this; // 1371
+                                // 1368
+                                var self = this; // 1369
                                 //
                                 if (!_.has(updates, collection)) {
-                                    // 1372
-                                    updates[collection] = []; // 1373
-                                } // 1374
+                                    // 1370
+                                    updates[collection] = []; // 1371
+                                } // 1372
                                 //
-                                updates[collection].push(msg); // 1375
-                            }, // 1376
+                                updates[collection].push(msg); // 1373
+                            }, // 1374
                             _getServerDoc: function (collection, id) {
-                                // 1378
-                                var self = this; // 1379
-                                if (!_.has(self._serverDocuments, collection)) return null; // 1380
-                                var serverDocsForCollection = self._serverDocuments[collection]; // 1382
-                                return serverDocsForCollection.get(id) || null; // 1383
-                            }, // 1384
+                                // 1376
+                                var self = this; // 1377
+                                if (!_.has(self._serverDocuments, collection)) return null; // 1378
+                                var serverDocsForCollection = self._serverDocuments[collection]; // 1380
+                                return serverDocsForCollection.get(id) || null; // 1381
+                            }, // 1382
                             _process_added: function (msg, updates) {
-                                // 1386
-                                var self = this; // 1387
-                                var id = MongoID.idParse(msg.id); // 1388
+                                // 1384
+                                var self = this; // 1385
+                                var id = MongoID.idParse(msg.id); // 1386
                                 //
-                                var serverDoc = self._getServerDoc(msg.collection, id); // 1389
+                                var serverDoc = self._getServerDoc(msg.collection, id); // 1387
                                 //
                                 if (serverDoc) {
-                                    // 1390
-                                    // Some outstanding stub wrote here.                                                                             // 1391
-                                    var isExisting = serverDoc.document !== undefined; // 1392
-                                    serverDoc.document = msg.fields || {}; // 1394
-                                    serverDoc.document._id = id; // 1395
+                                    // 1388
+                                    // Some outstanding stub wrote here.                                                                             // 1389
+                                    var isExisting = serverDoc.document !== undefined; // 1390
+                                    serverDoc.document = msg.fields || {}; // 1392
+                                    serverDoc.document._id = id; // 1393
                                     //
                                     if (self._resetStores) {
-                                        // 1397
-                                        // During reconnect the server is sending adds for existing ids.                                               // 1398
-                                        // Always push an update so that document stays in the store after                                             // 1399
-                                        // reset. Use current version of the document for this update, so                                              // 1400
-                                        // that stub-written values are preserved.                                                                     // 1401
-                                        var currentDoc = self._stores[msg.collection].getDoc(msg.id); // 1402
+                                        // 1395
+                                        // During reconnect the server is sending adds for existing ids.                                               // 1396
+                                        // Always push an update so that document stays in the store after                                             // 1397
+                                        // reset. Use current version of the document for this update, so                                              // 1398
+                                        // that stub-written values are preserved.                                                                     // 1399
+                                        var currentDoc = self._stores[msg.collection].getDoc(msg.id); // 1400
                                         //
-                                        if (currentDoc !== undefined) msg.fields = currentDoc; // 1403
+                                        if (currentDoc !== undefined) msg.fields = currentDoc; // 1401
                                         //
-                                        self._pushUpdate(updates, msg.collection, msg); // 1406
+                                        self._pushUpdate(updates, msg.collection, msg); // 1404
                                     } else if (isExisting) {
-                                        // 1407
-                                        throw new Error("Server sent add for existing id: " + msg.id); // 1408
-                                    } // 1409
+                                        // 1405
+                                        throw new Error("Server sent add for existing id: " + msg.id); // 1406
+                                    } // 1407
                                 } else {
-                                    // 1410
-                                    self._pushUpdate(updates, msg.collection, msg); // 1411
-                                } // 1412
-                            }, // 1413
+                                    // 1408
+                                    self._pushUpdate(updates, msg.collection, msg); // 1409
+                                } // 1410
+                            }, // 1411
                             _process_changed: function (msg, updates) {
-                                // 1415
-                                var self = this; // 1416
+                                // 1413
+                                var self = this; // 1414
                                 //
-                                var serverDoc = self._getServerDoc(msg.collection, MongoID.idParse(msg.id)); // 1417
+                                var serverDoc = self._getServerDoc(msg.collection, MongoID.idParse(msg.id)); // 1415
                                 //
                                 if (serverDoc) {
-                                    // 1419
-                                    if (serverDoc.document === undefined) throw new Error("Server sent changed for nonexisting id: " + msg.id); // 1420
-                                    DiffSequence.applyChanges(serverDoc.document, msg.fields); // 1422
+                                    // 1417
+                                    if (serverDoc.document === undefined) throw new Error("Server sent changed for nonexisting id: " + msg.id); // 1418
+                                    DiffSequence.applyChanges(serverDoc.document, msg.fields); // 1420
                                 } else {
-                                    // 1423
-                                    self._pushUpdate(updates, msg.collection, msg); // 1424
-                                } // 1425
-                            }, // 1426
+                                    // 1421
+                                    self._pushUpdate(updates, msg.collection, msg); // 1422
+                                } // 1423
+                            }, // 1424
                             _process_removed: function (msg, updates) {
-                                // 1428
-                                var self = this; // 1429
+                                // 1426
+                                var self = this; // 1427
                                 //
-                                var serverDoc = self._getServerDoc(msg.collection, MongoID.idParse(msg.id)); // 1430
+                                var serverDoc = self._getServerDoc(msg.collection, MongoID.idParse(msg.id)); // 1428
                                 //
                                 if (serverDoc) {
-                                    // 1432
-                                    // Some outstanding stub wrote here.                                                                             // 1433
-                                    if (serverDoc.document === undefined) throw new Error("Server sent removed for nonexisting id:" + msg.id); // 1434
-                                    serverDoc.document = undefined; // 1436
+                                    // 1430
+                                    // Some outstanding stub wrote here.                                                                             // 1431
+                                    if (serverDoc.document === undefined) throw new Error("Server sent removed for nonexisting id:" + msg.id); // 1432
+                                    serverDoc.document = undefined; // 1434
                                 } else {
-                                    // 1437
-                                    self._pushUpdate(updates, msg.collection, { // 1438
-                                        msg: 'removed', // 1439
-                                        collection: msg.collection, // 1440
-                                        id: msg.id // 1441
-                                    }); // 1438
-                                } // 1443
-                            }, // 1444
+                                    // 1435
+                                    self._pushUpdate(updates, msg.collection, { // 1436
+                                        msg: 'removed', // 1437
+                                        collection: msg.collection, // 1438
+                                        id: msg.id // 1439
+                                    }); // 1436
+                                } // 1441
+                            }, // 1442
                             _process_updated: function (msg, updates) {
-                                // 1446
-                                var self = this; // Process "method done" messages.                                                                // 1447
+                                // 1444
+                                var self = this; // Process "method done" messages.                                                                // 1445
                                 //
                                 _.each(msg.methods, function (methodId) {
-                                    // 1449
+                                    // 1447
                                     _.each(self._documentsWrittenByStub[methodId], function (written) {
-                                        // 1450
-                                        var serverDoc = self._getServerDoc(written.collection, written.id); // 1451
+                                        // 1448
+                                        var serverDoc = self._getServerDoc(written.collection, written.id); // 1449
                                         //
-                                        if (!serverDoc) throw new Error("Lost serverDoc for " + JSON.stringify(written)); // 1452
+                                        if (!serverDoc) throw new Error("Lost serverDoc for " + JSON.stringify(written)); // 1450
                                         if (!serverDoc.writtenByStubs[methodId]) throw new Error("Doc " + JSON.stringify(written) + " not written by  method " + methodId);
-                                        delete serverDoc.writtenByStubs[methodId]; // 1457
+                                        delete serverDoc.writtenByStubs[methodId]; // 1455
                                         //
                                         if (_.isEmpty(serverDoc.writtenByStubs)) {
-                                            // 1458
-                                            // All methods whose stubs wrote this method have completed! We can                                          // 1459
-                                            // now copy the saved document to the database (reverting the stub's                                         // 1460
-                                            // change if the server did not write to this object, or applying the                                        // 1461
-                                            // server's writes if it did).                                                                               // 1462
-                                            // This is a fake ddp 'replace' message.  It's just for talking                                              // 1464
-                                            // between livedata connections and minimongo.  (We have to stringify                                        // 1465
-                                            // the ID because it's supposed to look like a wire message.)                                                // 1466
-                                            self._pushUpdate(updates, written.collection, { // 1467
-                                                msg: 'replace', // 1468
-                                                id: MongoID.idStringify(written.id), // 1469
-                                                replace: serverDoc.document // 1470
-                                            }); // Call all flush callbacks.                                                                             // 1467
+                                            // 1456
+                                            // All methods whose stubs wrote this method have completed! We can                                          // 1457
+                                            // now copy the saved document to the database (reverting the stub's                                         // 1458
+                                            // change if the server did not write to this object, or applying the                                        // 1459
+                                            // server's writes if it did).                                                                               // 1460
+                                            // This is a fake ddp 'replace' message.  It's just for talking                                              // 1462
+                                            // between livedata connections and minimongo.  (We have to stringify                                        // 1463
+                                            // the ID because it's supposed to look like a wire message.)                                                // 1464
+                                            self._pushUpdate(updates, written.collection, { // 1465
+                                                msg: 'replace', // 1466
+                                                id: MongoID.idStringify(written.id), // 1467
+                                                replace: serverDoc.document // 1468
+                                            }); // Call all flush callbacks.                                                                             // 1465
                                             //
                                             //
                                             _.each(serverDoc.flushCallbacks, function (c) {
-                                                // 1473
-                                                c(); // 1474
-                                            }); // Delete this completed serverDocument. Don't bother to GC empty                                        // 1475
-                                            // IdMaps inside self._serverDocuments, since there probably aren't                                          // 1478
-                                            // many collections and they'll be written repeatedly.                                                       // 1479
+                                                // 1471
+                                                c(); // 1472
+                                            }); // Delete this completed serverDocument. Don't bother to GC empty                                        // 1473
+                                            // IdMaps inside self._serverDocuments, since there probably aren't                                          // 1476
+                                            // many collections and they'll be written repeatedly.                                                       // 1477
                                             //
                                             //
-                                            self._serverDocuments[written.collection].remove(written.id); // 1480
-                                        } // 1481
-                                    }); // 1482
+                                            self._serverDocuments[written.collection].remove(written.id); // 1478
+                                        } // 1479
+                                    }); // 1480
                                     //
                                     delete self._documentsWrittenByStub[methodId]; // We want to call the data-written callback, but we can't do so until all
-                                    // currently buffered messages are flushed.                                                                      // 1486
+                                    // currently buffered messages are flushed.                                                                      // 1484
                                     //
-                                    var callbackInvoker = self._methodInvokers[methodId]; // 1487
-                                    if (!callbackInvoker) throw new Error("No callback invoker for method " + methodId); // 1488
+                                    var callbackInvoker = self._methodInvokers[methodId]; // 1485
+                                    if (!callbackInvoker) throw new Error("No callback invoker for method " + methodId); // 1486
                                     //
-                                    self._runWhenAllServerDocsAreFlushed(_.bind(callbackInvoker.dataVisible, callbackInvoker)); // 1490
-                                }); // 1492
-                            }, // 1493
+                                    self._runWhenAllServerDocsAreFlushed(_.bind(callbackInvoker.dataVisible, callbackInvoker)); // 1488
+                                }); // 1490
+                            }, // 1491
                             _process_ready: function (msg, updates) {
-                                // 1495
-                                var self = this; // Process "sub ready" messages. "sub ready" messages don't take effect                           // 1496
-                                // until all current server documents have been flushed to the local                                               // 1498
-                                // database. We can use a write fence to implement this.                                                           // 1499
+                                // 1493
+                                var self = this; // Process "sub ready" messages. "sub ready" messages don't take effect                           // 1494
+                                // until all current server documents have been flushed to the local                                               // 1496
+                                // database. We can use a write fence to implement this.                                                           // 1497
                                 //
                                 _.each(msg.subs, function (subId) {
-                                    // 1500
+                                    // 1498
                                     self._runWhenAllServerDocsAreFlushed(function () {
-                                        // 1501
-                                        var subRecord = self._subscriptions[subId]; // Did we already unsubscribe?                                     // 1502
+                                        // 1499
+                                        var subRecord = self._subscriptions[subId]; // Did we already unsubscribe?                                     // 1500
                                         //
-                                        if (!subRecord) return; // Did we already receive a ready message? (Oops!)                                     // 1504
+                                        if (!subRecord) return; // Did we already receive a ready message? (Oops!)                                     // 1502
                                         //
-                                        if (subRecord.ready) return; // 1507
-                                        subRecord.ready = true; // 1509
-                                        subRecord.readyCallback && subRecord.readyCallback(); // 1510
-                                        subRecord.readyDeps.changed(); // 1511
-                                    }); // 1512
-                                }); // 1513
-                            }, // 1514
-                            // Ensures that "f" will be called after all documents currently in                                                  // 1516
-                            // _serverDocuments have been written to the local cache. f will not be called                                       // 1517
-                            // if the connection is lost before then!                                                                            // 1518
+                                        if (subRecord.ready) return; // 1505
+                                        subRecord.ready = true; // 1507
+                                        subRecord.readyCallback && subRecord.readyCallback(); // 1508
+                                        subRecord.readyDeps.changed(); // 1509
+                                    }); // 1510
+                                }); // 1511
+                            }, // 1512
+                            // Ensures that "f" will be called after all documents currently in                                                  // 1514
+                            // _serverDocuments have been written to the local cache. f will not be called                                       // 1515
+                            // if the connection is lost before then!                                                                            // 1516
                             _runWhenAllServerDocsAreFlushed: function (f) {
-                                // 1519
-                                var self = this; // 1520
+                                // 1517
+                                var self = this; // 1518
                                 //
                                 var runFAfterUpdates = function () {
-                                    // 1521
-                                    self._afterUpdateCallbacks.push(f); // 1522
-                                }; // 1523
+                                    // 1519
+                                    self._afterUpdateCallbacks.push(f); // 1520
+                                }; // 1521
                                 //
-                                var unflushedServerDocCount = 0; // 1524
+                                var unflushedServerDocCount = 0; // 1522
                                 //
                                 var onServerDocFlush = function () {
-                                    // 1525
-                                    --unflushedServerDocCount; // 1526
+                                    // 1523
+                                    --unflushedServerDocCount; // 1524
                                     //
                                     if (unflushedServerDocCount === 0) {
-                                        // 1527
-                                        // This was the last doc to flush! Arrange to run f after the updates                                          // 1528
-                                        // have been applied.                                                                                          // 1529
-                                        runFAfterUpdates(); // 1530
-                                    } // 1531
-                                }; // 1532
+                                        // 1525
+                                        // This was the last doc to flush! Arrange to run f after the updates                                          // 1526
+                                        // have been applied.                                                                                          // 1527
+                                        runFAfterUpdates(); // 1528
+                                    } // 1529
+                                }; // 1530
                                 //
                                 _.each(self._serverDocuments, function (collectionDocs) {
-                                    // 1533
+                                    // 1531
                                     collectionDocs.forEach(function (serverDoc) {
-                                        // 1534
+                                        // 1532
                                         var writtenByStubForAMethodWithSentMessage = _.any(serverDoc.writtenByStubs, function (dummy, methodId) {
-                                            // 1535
-                                            var invoker = self._methodInvokers[methodId]; // 1537
-                                            return invoker && invoker.sentMessage; // 1538
-                                        }); // 1539
+                                            // 1533
+                                            var invoker = self._methodInvokers[methodId]; // 1535
+                                            return invoker && invoker.sentMessage; // 1536
+                                        }); // 1537
                                         //
                                         if (writtenByStubForAMethodWithSentMessage) {
-                                            // 1540
-                                            ++unflushedServerDocCount; // 1541
-                                            serverDoc.flushCallbacks.push(onServerDocFlush); // 1542
-                                        } // 1543
-                                    }); // 1544
-                                }); // 1545
+                                            // 1538
+                                            ++unflushedServerDocCount; // 1539
+                                            serverDoc.flushCallbacks.push(onServerDocFlush); // 1540
+                                        } // 1541
+                                    }); // 1542
+                                }); // 1543
                                 //
                                 if (unflushedServerDocCount === 0) {
-                                    // 1546
-                                    // There aren't any buffered docs --- we can call f as soon as the current                                       // 1547
-                                    // round of updates is applied!                                                                                  // 1548
-                                    runFAfterUpdates(); // 1549
-                                } // 1550
-                            }, // 1551
+                                    // 1544
+                                    // There aren't any buffered docs --- we can call f as soon as the current                                       // 1545
+                                    // round of updates is applied!                                                                                  // 1546
+                                    runFAfterUpdates(); // 1547
+                                } // 1548
+                            }, // 1549
                             _livedata_nosub: function (msg) {
-                                // 1553
-                                var self = this; // First pass it through _livedata_data, which only uses it to help get                           // 1554
-                                // towards quiescence.                                                                                             // 1557
+                                // 1551
+                                var self = this; // First pass it through _livedata_data, which only uses it to help get                           // 1552
+                                // towards quiescence.                                                                                             // 1555
                                 //
-                                self._livedata_data(msg); // Do the rest of our processing immediately, with no                                    // 1558
-                                // buffering-until-quiescence.                                                                                     // 1561
-                                // we weren't subbed anyway, or we initiated the unsub.                                                            // 1563
+                                self._livedata_data(msg); // Do the rest of our processing immediately, with no                                    // 1556
+                                // buffering-until-quiescence.                                                                                     // 1559
+                                // we weren't subbed anyway, or we initiated the unsub.                                                            // 1561
                                 //
                                 //
-                                if (!_.has(self._subscriptions, msg.id)) return; // XXX COMPAT WITH 1.0.3.1 #errorCallback                         // 1564
+                                if (!_.has(self._subscriptions, msg.id)) return; // XXX COMPAT WITH 1.0.3.1 #errorCallback                         // 1562
                                 //
-                                var errorCallback = self._subscriptions[msg.id].errorCallback; // 1568
-                                var stopCallback = self._subscriptions[msg.id].stopCallback; // 1569
+                                var errorCallback = self._subscriptions[msg.id].errorCallback; // 1566
+                                var stopCallback = self._subscriptions[msg.id].stopCallback; // 1567
                                 //
-                                self._subscriptions[msg.id].remove(); // 1571
+                                self._subscriptions[msg.id].remove(); // 1569
                                 //
                                 var meteorErrorFromMsg = function (msgArg) {
-                                    // 1573
+                                    // 1571
                                     return msgArg && msgArg.error && new Meteor.Error(msgArg.error.error, msgArg.error.reason, msgArg.error.details);
-                                }; // XXX COMPAT WITH 1.0.3.1 #errorCallback                                                                       // 1576
+                                }; // XXX COMPAT WITH 1.0.3.1 #errorCallback                                                                       // 1574
                                 //
                                 //
                                 if (errorCallback && msg.error) {
-                                    // 1579
-                                    errorCallback(meteorErrorFromMsg(msg)); // 1580
-                                } // 1581
+                                    // 1577
+                                    errorCallback(meteorErrorFromMsg(msg)); // 1578
+                                } // 1579
                                 //
                                 if (stopCallback) {
-                                    // 1583
-                                    stopCallback(meteorErrorFromMsg(msg)); // 1584
-                                } // 1585
-                            }, // 1586
-                            _process_nosub: function () {// This is called as part of the "buffer until quiescence" process, but                 // 1588
-                                // nosub's effect is always immediate. It only goes in the buffer at all                                           // 1590
-                                // because it's possible for a nosub to be the thing that triggers                                                 // 1591
-                                // quiescence, if we were waiting for a sub to be revived and it dies                                              // 1592
-                                // instead.                                                                                                        // 1593
-                            }, // 1594
+                                    // 1581
+                                    stopCallback(meteorErrorFromMsg(msg)); // 1582
+                                } // 1583
+                            }, // 1584
+                            _process_nosub: function () {// This is called as part of the "buffer until quiescence" process, but                 // 1586
+                                // nosub's effect is always immediate. It only goes in the buffer at all                                           // 1588
+                                // because it's possible for a nosub to be the thing that triggers                                                 // 1589
+                                // quiescence, if we were waiting for a sub to be revived and it dies                                              // 1590
+                                // instead.                                                                                                        // 1591
+                            }, // 1592
                             _livedata_result: function (msg) {
-                                // 1596
-                                // id, result or error. error has error (code), reason, details                                                    // 1597
-                                var self = this; // Lets make sure there are no buffered writes before returning result.                           // 1599
+                                // 1594
+                                // id, result or error. error has error (code), reason, details                                                    // 1595
+                                var self = this; // Lets make sure there are no buffered writes before returning result.                           // 1597
                                 //
                                 if (!_.isEmpty(self._bufferedWrites)) {
-                                    // 1602
-                                    self._flushBufferedWrites(); // 1603
-                                } // find the outstanding request                                                                                  // 1604
-                                // should be O(1) in nearly all realistic use cases                                                                // 1607
+                                    // 1600
+                                    self._flushBufferedWrites(); // 1601
+                                } // find the outstanding request                                                                                  // 1602
+                                // should be O(1) in nearly all realistic use cases                                                                // 1605
                                 //
                                 //
                                 if (_.isEmpty(self._outstandingMethodBlocks)) {
-                                    // 1608
-                                    Meteor._debug("Received method result but no methods outstanding"); // 1609
+                                    // 1606
+                                    Meteor._debug("Received method result but no methods outstanding"); // 1607
                                     //
-                                    return; // 1610
-                                } // 1611
+                                    return; // 1608
+                                } // 1609
                                 //
-                                var currentMethodBlock = self._outstandingMethodBlocks[0].methods; // 1612
-                                var m; // 1613
+                                var currentMethodBlock = self._outstandingMethodBlocks[0].methods; // 1610
+                                var m; // 1611
                                 //
                                 for (var i = 0; i < currentMethodBlock.length; i++) {
-                                    // 1614
-                                    m = currentMethodBlock[i]; // 1615
-                                    if (m.methodId === msg.id) break; // 1616
-                                } // 1618
+                                    // 1612
+                                    m = currentMethodBlock[i]; // 1613
+                                    if (m.methodId === msg.id) break; // 1614
+                                } // 1616
                                 //
                                 if (!m) {
-                                    // 1620
-                                    Meteor._debug("Can't match method response to original method call", msg); // 1621
+                                    // 1618
+                                    Meteor._debug("Can't match method response to original method call", msg); // 1619
                                     //
-                                    return; // 1622
-                                } // Remove from current method block. This may leave the block empty, but we                                      // 1623
-                                // don't move on to the next block until the callback has been delivered, in                                       // 1626
-                                // _outstandingMethodFinished.                                                                                     // 1627
+                                    return; // 1620
+                                } // Remove from current method block. This may leave the block empty, but we                                      // 1621
+                                // don't move on to the next block until the callback has been delivered, in                                       // 1624
+                                // _outstandingMethodFinished.                                                                                     // 1625
                                 //
                                 //
-                                currentMethodBlock.splice(i, 1); // 1628
+                                currentMethodBlock.splice(i, 1); // 1626
                                 //
                                 if (_.has(msg, 'error')) {
-                                    // 1630
-                                    m.receiveResult(new Meteor.Error(msg.error.error, msg.error.reason, msg.error.details)); // 1631
+                                    // 1628
+                                    m.receiveResult(new Meteor.Error(msg.error.error, msg.error.reason, msg.error.details)); // 1629
                                 } else {
-                                    // 1634
-                                    // msg.result may be undefined if the method didn't return a                                                     // 1635
-                                    // value                                                                                                         // 1636
-                                    m.receiveResult(undefined, msg.result); // 1637
-                                } // 1638
-                            }, // 1639
-                            // Called by MethodInvoker after a method's callback is invoked.  If this was                                        // 1641
-                            // the last outstanding method in the current block, runs the next block. If                                         // 1642
-                            // there are no more methods, consider accepting a hot code push.                                                    // 1643
+                                    // 1632
+                                    // msg.result may be undefined if the method didn't return a                                                     // 1633
+                                    // value                                                                                                         // 1634
+                                    m.receiveResult(undefined, msg.result); // 1635
+                                } // 1636
+                            }, // 1637
+                            // Called by MethodInvoker after a method's callback is invoked.  If this was                                        // 1639
+                            // the last outstanding method in the current block, runs the next block. If                                         // 1640
+                            // there are no more methods, consider accepting a hot code push.                                                    // 1641
                             _outstandingMethodFinished: function () {
-                                // 1644
-                                var self = this; // 1645
+                                // 1642
+                                var self = this; // 1643
                                 if (self._anyMethodsAreOutstanding()) return; // No methods are outstanding. This should mean that the first block of
-                                // methods is empty. (Or it might not exist, if this was a method that                                             // 1650
-                                // half-finished before disconnect/reconnect.)                                                                     // 1651
+                                // methods is empty. (Or it might not exist, if this was a method that                                             // 1648
+                                // half-finished before disconnect/reconnect.)                                                                     // 1649
                                 //
                                 if (!_.isEmpty(self._outstandingMethodBlocks)) {
-                                    // 1652
-                                    var firstBlock = self._outstandingMethodBlocks.shift(); // 1653
+                                    // 1650
+                                    var firstBlock = self._outstandingMethodBlocks.shift(); // 1651
                                     //
                                     if (!_.isEmpty(firstBlock.methods)) throw new Error("No methods outstanding but nonempty block: " + JSON.stringify(firstBlock)); // Send the outstanding methods now in the first block.
                                     //
-                                    if (!_.isEmpty(self._outstandingMethodBlocks)) self._sendOutstandingMethods(); // 1659
-                                } // Maybe accept a hot code push.                                                                                 // 1661
+                                    if (!_.isEmpty(self._outstandingMethodBlocks)) self._sendOutstandingMethods(); // 1657
+                                } // Maybe accept a hot code push.                                                                                 // 1659
                                 //
                                 //
-                                self._maybeMigrate(); // 1664
-                            }, // 1665
-                            // Sends messages for all the methods in the first block in                                                          // 1667
-                            // _outstandingMethodBlocks.                                                                                         // 1668
+                                self._maybeMigrate(); // 1662
+                            }, // 1663
+                            // Sends messages for all the methods in the first block in                                                          // 1665
+                            // _outstandingMethodBlocks.                                                                                         // 1666
                             _sendOutstandingMethods: function () {
-                                // 1669
-                                var self = this; // 1670
-                                if (_.isEmpty(self._outstandingMethodBlocks)) return; // 1671
+                                // 1667
+                                var self = this; // 1668
+                                if (_.isEmpty(self._outstandingMethodBlocks)) return; // 1669
                                 //
                                 _.each(self._outstandingMethodBlocks[0].methods, function (m) {
-                                    // 1673
-                                    m.sendMessage(); // 1674
-                                }); // 1675
-                            }, // 1676
+                                    // 1671
+                                    m.sendMessage(); // 1672
+                                }); // 1673
+                            }, // 1674
                             _livedata_error: function (msg) {
-                                // 1678
-                                Meteor._debug("Received error from server: ", msg.reason); // 1679
+                                // 1676
+                                Meteor._debug("Received error from server: ", msg.reason); // 1677
                                 //
-                                if (msg.offendingMessage) Meteor._debug("For: ", msg.offendingMessage); // 1680
-                            }, // 1682
+                                if (msg.offendingMessage) Meteor._debug("For: ", msg.offendingMessage); // 1678
+                            }, // 1680
                             _callOnReconnectAndSendAppropriateOutstandingMethods: function () {
-                                // 1684
-                                var self = this; // 1685
-                                var oldOutstandingMethodBlocks = self._outstandingMethodBlocks; // 1686
-                                self._outstandingMethodBlocks = []; // 1687
-                                self.onReconnect(); // 1689
+                                // 1682
+                                var self = this; // 1683
+                                var oldOutstandingMethodBlocks = self._outstandingMethodBlocks; // 1684
+                                self._outstandingMethodBlocks = []; // 1685
+                                self.onReconnect && self.onReconnect(); // 1687
+                                //
+                                DDP._reconnectHook.each(function (callback) {
+                                    // 1688
+                                    callback(self); // 1689
+                                    return true; // 1690
+                                }); // 1691
+                                //
                                 if (_.isEmpty(oldOutstandingMethodBlocks)) return; // We have at least one block worth of old outstanding methods to try
-                                // again. First: did onReconnect actually send anything? If not, we just                                           // 1695
-                                // restore all outstanding methods and run the first block.                                                        // 1696
+                                // again. First: did onReconnect actually send anything? If not, we just                                           // 1697
+                                // restore all outstanding methods and run the first block.                                                        // 1698
                                 //
                                 if (_.isEmpty(self._outstandingMethodBlocks)) {
-                                    // 1697
-                                    self._outstandingMethodBlocks = oldOutstandingMethodBlocks; // 1698
+                                    // 1699
+                                    self._outstandingMethodBlocks = oldOutstandingMethodBlocks; // 1700
                                     //
-                                    self._sendOutstandingMethods(); // 1699
+                                    self._sendOutstandingMethods(); // 1701
                                     //
-                                    return; // 1700
-                                } // OK, there are blocks on both sides. Special case: merge the last block of                                     // 1701
-                                // the reconnect methods with the first block of the original methods, if                                          // 1704
-                                // neither of them are "wait" blocks.                                                                              // 1705
+                                    return; // 1702
+                                } // OK, there are blocks on both sides. Special case: merge the last block of                                     // 1703
+                                // the reconnect methods with the first block of the original methods, if                                          // 1706
+                                // neither of them are "wait" blocks.                                                                              // 1707
                                 //
                                 //
                                 if (!_.last(self._outstandingMethodBlocks).wait && !oldOutstandingMethodBlocks[0].wait) {
-                                    // 1706
+                                    // 1708
                                     _.each(oldOutstandingMethodBlocks[0].methods, function (m) {
-                                        // 1708
+                                        // 1710
                                         _.last(self._outstandingMethodBlocks).methods.push(m); // If this "last block" is also the first block, send the message.
                                         //
                                         //
-                                        if (self._outstandingMethodBlocks.length === 1) m.sendMessage(); // 1712
-                                    }); // 1714
+                                        if (self._outstandingMethodBlocks.length === 1) m.sendMessage(); // 1714
+                                    }); // 1716
                                     //
-                                    oldOutstandingMethodBlocks.shift(); // 1716
-                                } // Now add the rest of the original blocks on.                                                                   // 1717
+                                    oldOutstandingMethodBlocks.shift(); // 1718
+                                } // Now add the rest of the original blocks on.                                                                   // 1719
                                 //
                                 //
                                 _.each(oldOutstandingMethodBlocks, function (block) {
-                                    // 1720
-                                    self._outstandingMethodBlocks.push(block); // 1721
-                                }); // 1722
-                            }, // 1723
-                            // We can accept a hot code push if there are no methods in flight.                                                  // 1725
+                                    // 1722
+                                    self._outstandingMethodBlocks.push(block); // 1723
+                                }); // 1724
+                            }, // 1725
+                            // We can accept a hot code push if there are no methods in flight.                                                  // 1727
                             _readyToMigrate: function () {
-                                // 1726
-                                var self = this; // 1727
-                                return _.isEmpty(self._methodInvokers); // 1728
-                            }, // 1729
-                            // If we were blocking a migration, see if it's now possible to continue.                                            // 1731
-                            // Call whenever the set of outstanding/blocked methods shrinks.                                                     // 1732
+                                // 1728
+                                var self = this; // 1729
+                                return _.isEmpty(self._methodInvokers); // 1730
+                            }, // 1731
+                            // If we were blocking a migration, see if it's now possible to continue.                                            // 1733
+                            // Call whenever the set of outstanding/blocked methods shrinks.                                                     // 1734
                             _maybeMigrate: function () {
-                                // 1733
-                                var self = this; // 1734
+                                // 1735
+                                var self = this; // 1736
                                 //
                                 if (self._retryMigrate && self._readyToMigrate()) {
-                                    // 1735
-                                    self._retryMigrate(); // 1736
+                                    // 1737
+                                    self._retryMigrate(); // 1738
                                     //
-                                    self._retryMigrate = null; // 1737
-                                } // 1738
-                            } // 1739
-                        }); // 480
+                                    self._retryMigrate = null; // 1739
+                                } // 1740
+                            } // 1741
+                        }); // 478
                         //
-                        LivedataTest.Connection = Connection; // @param url {String} URL to Meteor app,                                        // 1742
-                        //     e.g.:                                                                                                           // 1745
-                        //     "subdomain.meteor.com",                                                                                         // 1746
-                        //     "http://subdomain.meteor.com",                                                                                  // 1747
-                        //     "/",                                                                                                            // 1748
-                        //     "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"                                                                  // 1749
-                        /**                                                                                                                    // 1751
+                        LivedataTest.Connection = Connection; // @param url {String} URL to Meteor app,                                        // 1744
+                        //     e.g.:                                                                                                           // 1747
+                        //     "subdomain.meteor.com",                                                                                         // 1748
+                        //     "http://subdomain.meteor.com",                                                                                  // 1749
+                        //     "/",                                                                                                            // 1750
+                        //     "ddp+sockjs://ddp--****-foo.meteor.com/sockjs"                                                                  // 1751
+                        /**                                                                                                                    // 1753
                          * @summary Connect to the server of a different Meteor application to subscribe to its document sets and invoke its remote methods.
                          * @locus Anywhere                                                                                                     //
                          * @param {String} url The URL of another Meteor application.                                                          //
                          */ //
                         //
                         DDP.connect = function (url, options) {
-                            // 1756
-                            var ret = new Connection(url, options); // 1757
-                            allConnections.push(ret); // hack. see below.                                                                        // 1758
+                            // 1758
+                            var ret = new Connection(url, options); // 1759
+                            allConnections.push(ret); // hack. see below.                                                                        // 1760
                             //
-                            return ret; // 1759
-                        }; // Hack for `spiderable` package: a way to see if the page is done                                                  // 1760
-                        // loading all the data it needs.                                                                                      // 1763
-                        //                                                                                                                     // 1764
+                            return ret; // 1761
+                        }; // 1762
+                        //
+                        DDP._reconnectHook = new Hook({ // 1764
+                            bindEnvironment: false // 1764
+                        }); /**                                                                                                                // 1764
+                             * @summary Register a function to call as the first step of                                                       //
+                             * reconnecting. This function can call methods which will be executed before                                      //
+                             * any other outstanding methods. For example, this can be used to re-establish                                    //
+                             * the appropriate authentication context on the connection.                                                       //
+                             * @locus Anywhere                                                                                                 //
+                             * @param {Function} callback The function to call. It will be called with a                                       //
+                             * single argument, the [connection object](#ddp_connect) that is reconnecting.                                    //
+                             */ //
+                        //
+                        DDP.onReconnect = function (callback) {
+                            // 1775
+                            return DDP._reconnectHook.register(callback); // 1776
+                        }; // Hack for `spiderable` package: a way to see if the page is done                                                  // 1777
+                        // loading all the data it needs.                                                                                      // 1780
+                        //                                                                                                                     // 1781
                         //
                         //
-                        allConnections = []; // 1765
+                        allConnections = []; // 1782
                         //
                         DDP._allSubscriptionsReady = function () {
-                            // 1766
+                            // 1783
                             return _.all(allConnections, function (conn) {
-                                // 1767
+                                // 1784
                                 return _.all(conn._subscriptions, function (sub) {
-                                    // 1768
-                                    return sub.ready; // 1769
-                                }); // 1770
-                            }); // 1771
-                        }; // 1772
+                                    // 1785
+                                    return sub.ready; // 1786
+                                }); // 1787
+                            }); // 1788
+                        }; // 1789
                         /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                     }, "client_convenience.js": function (_require8, _exports7, _module6) {
 
@@ -26865,7 +27091,7 @@ __meteor_runtime_config__ = {
               // 22
               Object.keys(ids).forEach(function (id) {
                 // 23
-                var version = getFromTree(dynamicVersions, id); // 24
+                var version = dynamicVersions.get(id); // 24
                 if (version) {
                   // 25
                   versions[id] = version; // 26
@@ -26902,7 +27128,7 @@ __meteor_runtime_config__ = {
                     // 50
                     addToTree(tree, id, makeModuleFunction(id, source, info.options)); // 51
                     // 52
-                    var version = getFromTree(dynamicVersions, id); // 53
+                    var version = dynamicVersions.get(id); // 53
                     if (version) {
                       // 54
                       versionsAndSourcesById[id] = { // 55
@@ -26983,51 +27209,41 @@ __meteor_runtime_config__ = {
               }); // 119
             } // 120
             // 121
-            function getFromTree(tree, id) {
-              // 122
-              id.split("/").every(function (part) {
-                // 123
-                return !part || (tree = tree[part]); // 124
-              }); // 125
-              // 126
-              return tree; // 127
-            } // 128
-            // 129
             function addToTree(tree, id, value) {
-              // 130
-              var parts = id.split("/"); // 131
-              var lastIndex = parts.length - 1; // 132
+              // 122
+              var parts = id.split("/"); // 123
+              var lastIndex = parts.length - 1; // 124
               parts.forEach(function (part, i) {
-                // 133
+                // 125
                 if (part) {
-                  // 134
-                  tree = tree[part] = tree[part] || ( // 135
-                  i < lastIndex ? Object.create(null) : value); // 136
-                } // 137
-              }); // 138
-            } // 139
-            // 140
+                  // 126
+                  tree = tree[part] = tree[part] || ( // 127
+                  i < lastIndex ? Object.create(null) : value); // 128
+                } // 129
+              }); // 130
+            } // 131
+            // 132
             function getNamespace(_module2, id) {
-              // 141
-              var namespace; // 142
-              // 143
-              _module2.watch(_module2.require(id), { // 144
+              // 133
+              var namespace; // 134
+              // 135
+              _module2.watch(_module2.require(id), { // 136
                 "*": function (ns) {
-                  // 145
-                  namespace = ns; // 146
-                } // 147
-              }); // 148
-              // 149
-              // This helps with Babel interop, since we're not just returning the         // 150
-              // module.exports object.                                                    // 151
-              Object.defineProperty(namespace, "__esModule", { // 152
-                value: true, // 153
-                enumerable: false // 154
-              }); // 155
-              // 156
-              return namespace; // 157
-            } // 158
-            // 159
+                  // 137
+                  namespace = ns; // 138
+                } // 139
+              }); // 140
+              // 141
+              // This helps with Babel interop, since we're not just returning the         // 142
+              // module.exports object.                                                    // 143
+              Object.defineProperty(namespace, "__esModule", { // 144
+                value: true, // 145
+                enumerable: false // 146
+              }); // 147
+              // 148
+              return namespace; // 149
+            } // 150
+            // 151
             /////////////////////////////////////////////////////////////////////////////////
           }, "cache.js": function (_require3, _exports3, _module3) {
 
@@ -27103,8 +27319,8 @@ __meteor_runtime_config__ = {
             } // 56
             // 57
             var objectStoreMap = { // 58
-              sourcesByVersion: { keyPath: "version" } // 59
-            }; // 60
+              sourcesByVersion: { keyPath: "version" // 59
+              } }; // 60
             // 61
             function makeOnError(reject, source) {
               // 62
@@ -27173,7 +27389,7 @@ __meteor_runtime_config__ = {
                     var version = versions[id]; // 116
                     if (version) {
                       // 117
-                      var sourceRequest = sourcesByVersion.get(versions[id]); // 118
+                      var sourceRequest = sourcesByVersion.get(version); // 118
                       sourceRequest.onerror = makeOnError(reject, "sourcesByVersion.get");
                       sourceRequest.onsuccess = function (event) {
                         // 120
@@ -27258,7 +27474,7 @@ __meteor_runtime_config__ = {
             } // 189
             // 190
             /////////////////////////////////////////////////////////////////////////////////
-          }, "dynamic-versions.js": function (_require4, _exports4, _module4) {
+          }, "dynamic-versions.js": function (_require4, _exports4) {
 
             /////////////////////////////////////////////////////////////////////////////////
             //                                                                             //
@@ -27269,8 +27485,41 @@ __meteor_runtime_config__ = {
             // This magic double-underscored identifier gets replaced in                   // 1
             // tools/isobuild/bundler.js with a tree of hashes of all dynamic              // 2
             // modules, for use in client.js and cache.js.                                 // 3
-            _module4.exports = {}; // 4
+            var versions = {}; // 4
             // 5
+            _exports4.get = function (id) {
+              // 6
+              var tree = versions; // 7
+              var version = null; // 8
+              // 9
+              id.split("/").some(function (part) {
+                // 10
+                if (part) {
+                  // 11
+                  // If the tree contains identifiers for Meteor packages with colons      // 12
+                  // in their names, the colons should not have been replaced by           // 13
+                  // underscores, but there's a bug that results in that behavior, so      // 14
+                  // for now it seems safest to be tolerant of underscores here.           // 15
+                  // https://github.com/meteor/meteor/pull/9103                            // 16
+                  tree = tree[part] || tree[part.replace(":", "_")]; // 17
+                } // 18
+                // 19
+                if (!tree) {
+                  // 20
+                  // Terminate the search without reassigning version.                     // 21
+                  return true; // 22
+                } // 23
+                // 24
+                if (typeof tree === "string") {
+                  // 25
+                  version = tree; // 26
+                  return true; // 27
+                } // 28
+              }); // 29
+              // 30
+              return version; // 31
+            }; // 32
+            // 33
             /////////////////////////////////////////////////////////////////////////////////
           } } } } }, {
     "extensions": [".js", ".json"]
@@ -27655,7 +27904,8 @@ __meteor_runtime_config__ = {
                   return { // 254
                     lng: o.coordinates[0], // 255
                     lat: o.coordinates[1] // 256
-                  }; // 257
+                    // 257
+                  };
                 }); // 258
                 // 259
                 var n_source, n_stack, n_dest, start, end, i, sig; // 260
@@ -27762,7 +28012,8 @@ __meteor_runtime_config__ = {
                   return { // 353
                     type: "Point", // 354
                     coordinates: [o.lng, o.lat] // 355
-                  }; // 356
+                    // 356
+                  };
                 }); // 357
               }; // 358
               // 359
@@ -28119,7 +28370,7 @@ __meteor_runtime_config__ = {
   var Set = Package['ecmascript-runtime-client'].Set;
 
   /* Package-scope variables */
-  var subMatcher, MinimongoTest, MinimongoError, LocalCollection, Minimongo;
+  var MinimongoTest, MinimongoError, LocalCollection, Minimongo;
 
   var _require3 = meteorInstall({ "node_modules": { "meteor": { "minimongo": { "minimongo_client.js": function (_require, _exports, _module) {
 
@@ -28438,1351 +28689,1352 @@ __meteor_runtime_config__ = {
                     //
                     return Object.assign(a, (_Object$assign = {}, _Object$assign[b] = operand[b], _Object$assign)); // 174
                   }, {}), true); // 174
+                  var subMatcher = void 0; // 177
                   //
                   if (isDocMatcher) {
-                    // 177
-                    // This is NOT the same as compileValueSelector(operand), and not just                                         // 178
-                    // because of the slightly different calling convention.                                                       // 179
-                    // {$elemMatch: {x: 3}} means "an element has a field x:3", not                                                // 180
-                    // "consists only of a field x:3". Also, regexps and sub-$ are allowed.                                        // 181
-                    subMatcher = compileDocumentSelector(operand, matcher, { // 182
-                      inElemMatch: true // 183
-                    }); // 183
+                    // 178
+                    // This is NOT the same as compileValueSelector(operand), and not just                                         // 179
+                    // because of the slightly different calling convention.                                                       // 180
+                    // {$elemMatch: {x: 3}} means "an element has a field x:3", not                                                // 181
+                    // "consists only of a field x:3". Also, regexps and sub-$ are allowed.                                        // 182
+                    subMatcher = compileDocumentSelector(operand, matcher, { // 183
+                      inElemMatch: true // 184
+                    }); // 184
                   } else {
-                    // 184
-                    subMatcher = compileValueSelector(operand, matcher); // 185
-                  } // 186
+                    // 185
+                    subMatcher = compileValueSelector(operand, matcher); // 186
+                  } // 187
                   //
                   return function (value) {
-                    // 188
+                    // 189
                     if (!Array.isArray(value)) {
-                      // 189
-                      return false; // 190
-                    } // 191
+                      // 190
+                      return false; // 191
+                    } // 192
                     //
                     for (var i = 0; i < value.length; ++i) {
-                      // 193
-                      var arrayElement = value[i]; // 194
-                      var arg = void 0; // 195
+                      // 194
+                      var arrayElement = value[i]; // 195
+                      var arg = void 0; // 196
                       //
                       if (isDocMatcher) {
-                        // 196
-                        // We can only match {$elemMatch: {b: 3}} against objects.                                                 // 197
-                        // (We can also match against arrays, if there's numeric indices,                                          // 198
-                        // eg {$elemMatch: {'0.b': 3}} or {$elemMatch: {0: 3}}.)                                                   // 199
+                        // 197
+                        // We can only match {$elemMatch: {b: 3}} against objects.                                                 // 198
+                        // (We can also match against arrays, if there's numeric indices,                                          // 199
+                        // eg {$elemMatch: {'0.b': 3}} or {$elemMatch: {0: 3}}.)                                                   // 200
                         if (!isIndexable(arrayElement)) {
-                          // 200
-                          return false; // 201
-                        } // 202
+                          // 201
+                          return false; // 202
+                        } // 203
                         //
-                        arg = arrayElement; // 204
+                        arg = arrayElement; // 205
                       } else {
-                        // 205
-                        // dontIterate ensures that {a: {$elemMatch: {$gt: 5}}} matches                                            // 206
-                        // {a: [8]} but not {a: [[8]]}                                                                             // 207
-                        arg = [{ // 208
-                          value: arrayElement, // 208
-                          dontIterate: true // 208
-                        }]; // 208
-                      } // XXX support $near in $elemMatch by propagating $distance?                                               // 209
+                        // 206
+                        // dontIterate ensures that {a: {$elemMatch: {$gt: 5}}} matches                                            // 207
+                        // {a: [8]} but not {a: [[8]]}                                                                             // 208
+                        arg = [{ // 209
+                          value: arrayElement, // 209
+                          dontIterate: true // 209
+                        }]; // 209
+                      } // XXX support $near in $elemMatch by propagating $distance?                                               // 210
                       //
                       //
                       if (subMatcher(arg).result) {
-                        // 211
-                        return i; // specially understood to mean "use as arrayIndices"                                            // 212
-                      } // 213
-                    } // 214
+                        // 212
+                        return i; // specially understood to mean "use as arrayIndices"                                            // 213
+                      } // 214
+                    } // 215
                     //
-                    return false; // 216
-                  }; // 217
-                } // 218
-              } // 164
-            }; // 17
-            // Operators that appear at the top level of a document selector.                                                      // 222
-            var LOGICAL_OPERATORS = { // 223
+                    return false; // 217
+                  }; // 218
+                } // 219
+                // 164
+              } }; // 17
+            // Operators that appear at the top level of a document selector.                                                      // 223
+            var LOGICAL_OPERATORS = { // 224
               $and: function (subSelector, matcher, inElemMatch) {
-                // 224
-                return andDocumentMatchers(compileArrayOfDocumentSelectors(subSelector, matcher, inElemMatch)); // 225
-              }, // 228
+                // 225
+                return andDocumentMatchers(compileArrayOfDocumentSelectors(subSelector, matcher, inElemMatch)); // 226
+              }, // 229
               $or: function (subSelector, matcher, inElemMatch) {
-                // 230
+                // 231
                 var matchers = compileArrayOfDocumentSelectors(subSelector, matcher, inElemMatch); // Special case: if there is only one matcher, use it directly, *preserving*
-                // any arrayIndices it returns.                                                                                    // 238
+                // any arrayIndices it returns.                                                                                    // 239
                 //
                 if (matchers.length === 1) {
-                  // 239
-                  return matchers[0]; // 240
-                } // 241
+                  // 240
+                  return matchers[0]; // 241
+                } // 242
                 //
                 return function (doc) {
-                  // 243
+                  // 244
                   var result = matchers.some(function (fn) {
-                    // 244
-                    return fn(doc).result; // 244
-                  }); // $or does NOT set arrayIndices when it has multiple                                                        // 244
-                  // sub-expressions. (Tested against MongoDB.)                                                                    // 246
+                    // 245
+                    return fn(doc).result; // 245
+                  }); // $or does NOT set arrayIndices when it has multiple                                                        // 245
+                  // sub-expressions. (Tested against MongoDB.)                                                                    // 247
                   //
-                  return { // 247
-                    result: result // 247
-                  }; // 247
-                }; // 248
-              }, // 249
+                  return { // 248
+                    result: result // 248
+                  }; // 248
+                }; // 249
+              }, // 250
               $nor: function (subSelector, matcher, inElemMatch) {
-                // 251
-                var matchers = compileArrayOfDocumentSelectors(subSelector, matcher, inElemMatch); // 252
+                // 252
+                var matchers = compileArrayOfDocumentSelectors(subSelector, matcher, inElemMatch); // 253
                 return function (doc) {
-                  // 257
+                  // 258
                   var result = matchers.every(function (fn) {
-                    // 258
-                    return !fn(doc).result; // 258
-                  }); // Never set arrayIndices, because we only match if nothing in particular                                    // 258
-                  // 'matched' (and because this is consistent with MongoDB).                                                      // 260
+                    // 259
+                    return !fn(doc).result; // 259
+                  }); // Never set arrayIndices, because we only match if nothing in particular                                    // 259
+                  // 'matched' (and because this is consistent with MongoDB).                                                      // 261
                   //
-                  return { // 261
-                    result: result // 261
-                  }; // 261
-                }; // 262
-              }, // 263
+                  return { // 262
+                    result: result // 262
+                  }; // 262
+                }; // 263
+              }, // 264
               $where: function (selectorValue, matcher) {
-                // 265
-                // Record that *any* path may be used.                                                                             // 266
-                matcher._recordPathUsed(''); // 267
+                // 266
+                // Record that *any* path may be used.                                                                             // 267
+                matcher._recordPathUsed(''); // 268
                 //
-                matcher._hasWhere = true; // 268
+                matcher._hasWhere = true; // 269
                 //
                 if (!(selectorValue instanceof Function)) {
-                  // 270
-                  // XXX MongoDB seems to have more complex logic to decide where or or not                                        // 271
-                  // to add 'return'; not sure exactly what it is.                                                                 // 272
-                  selectorValue = Function('obj', "return " + selectorValue); // 273
-                } // We make the document available as both `this` and `obj`.                                                      // 274
-                // // XXX not sure what we should do if this throws                                                                // 277
+                  // 271
+                  // XXX MongoDB seems to have more complex logic to decide where or or not                                        // 272
+                  // to add 'return'; not sure exactly what it is.                                                                 // 273
+                  selectorValue = Function('obj', "return " + selectorValue); // 274
+                } // We make the document available as both `this` and `obj`.                                                      // 275
+                // // XXX not sure what we should do if this throws                                                                // 278
                 //
                 //
                 return function (doc) {
-                  // 278
-                  return { // 278
-                    result: selectorValue.call(doc, doc) // 278
-                  }; // 278
-                }; // 278
-              }, // 279
-              // This is just used as a comment in the query (in MongoDB, it also ends up in                                       // 281
-              // query logs); it has no effect on the actual selection.                                                            // 282
+                  // 279
+                  return { // 279
+                    result: selectorValue.call(doc, doc) // 279
+                  }; // 279
+                }; // 279
+              }, // 280
+              // This is just used as a comment in the query (in MongoDB, it also ends up in                                       // 282
+              // query logs); it has no effect on the actual selection.                                                            // 283
               $comment: function () {
-                // 283
+                // 284
                 return function () {
-                  // 284
-                  return { // 284
-                    result: true // 284
-                  }; // 284
-                }; // 284
-              } // 285
-            }; // Operators that (unlike LOGICAL_OPERATORS) pertain to individual paths in a                                       // 223
-            // document, but (unlike ELEMENT_OPERATORS) do not have a simple definition as                                         // 289
-            // "match each branched value independently and combine with                                                           // 290
-            // convertElementMatcherToBranchedMatcher".                                                                            // 291
+                  // 285
+                  return { // 285
+                    result: true // 285
+                  }; // 285
+                }; // 285
+              } // 286
+            }; // Operators that (unlike LOGICAL_OPERATORS) pertain to individual paths in a                                       // 224
+            // document, but (unlike ELEMENT_OPERATORS) do not have a simple definition as                                         // 290
+            // "match each branched value independently and combine with                                                           // 291
+            // convertElementMatcherToBranchedMatcher".                                                                            // 292
             //
-            var VALUE_OPERATORS = { // 292
+            var VALUE_OPERATORS = { // 293
               $eq: function (operand) {
-                // 293
-                return convertElementMatcherToBranchedMatcher(equalityElementMatcher(operand)); // 294
-              }, // 297
+                // 294
+                return convertElementMatcherToBranchedMatcher(equalityElementMatcher(operand)); // 295
+              }, // 298
               $not: function (operand, valueSelector, matcher) {
-                // 298
-                return invertBranchedMatcher(compileValueSelector(operand, matcher)); // 299
-              }, // 300
+                // 299
+                return invertBranchedMatcher(compileValueSelector(operand, matcher)); // 300
+              }, // 301
               $ne: function (operand) {
-                // 301
-                return invertBranchedMatcher(convertElementMatcherToBranchedMatcher(equalityElementMatcher(operand))); // 302
-              }, // 305
+                // 302
+                return invertBranchedMatcher(convertElementMatcherToBranchedMatcher(equalityElementMatcher(operand))); // 303
+              }, // 306
               $nin: function (operand) {
-                // 306
+                // 307
                 return invertBranchedMatcher(convertElementMatcherToBranchedMatcher(ELEMENT_OPERATORS.$in.compileElementSelector(operand)));
-              }, // 312
+              }, // 313
               $exists: function (operand) {
-                // 313
+                // 314
                 var exists = convertElementMatcherToBranchedMatcher(function (value) {
-                  // 314
-                  return value !== undefined; // 315
-                }); // 315
-                return operand ? exists : invertBranchedMatcher(exists); // 317
-              }, // 318
-              // $options just provides options for $regex; its logic is inside $regex                                             // 319
+                  // 315
+                  return value !== undefined; // 316
+                }); // 316
+                return operand ? exists : invertBranchedMatcher(exists); // 318
+              }, // 319
+              // $options just provides options for $regex; its logic is inside $regex                                             // 320
               $options: function (operand, valueSelector) {
-                // 320
+                // 321
                 if (!hasOwn.call(valueSelector, '$regex')) {
-                  // 321
-                  throw Error('$options needs a $regex'); // 322
-                } // 323
+                  // 322
+                  throw Error('$options needs a $regex'); // 323
+                } // 324
                 //
-                return everythingMatcher; // 325
-              }, // 326
-              // $maxDistance is basically an argument to $near                                                                    // 327
+                return everythingMatcher; // 326
+              }, // 327
+              // $maxDistance is basically an argument to $near                                                                    // 328
               $maxDistance: function (operand, valueSelector) {
-                // 328
+                // 329
                 if (!valueSelector.$near) {
-                  // 329
-                  throw Error('$maxDistance needs a $near'); // 330
-                } // 331
+                  // 330
+                  throw Error('$maxDistance needs a $near'); // 331
+                } // 332
                 //
-                return everythingMatcher; // 333
-              }, // 334
+                return everythingMatcher; // 334
+              }, // 335
               $all: function (operand, valueSelector, matcher) {
-                // 335
+                // 336
                 if (!Array.isArray(operand)) {
-                  // 336
-                  throw Error('$all requires array'); // 337
-                } // Not sure why, but this seems to be what MongoDB does.                                                         // 338
+                  // 337
+                  throw Error('$all requires array'); // 338
+                } // Not sure why, but this seems to be what MongoDB does.                                                         // 339
                 //
                 //
                 if (operand.length === 0) {
-                  // 341
-                  return nothingMatcher; // 342
-                } // 343
+                  // 342
+                  return nothingMatcher; // 343
+                } // 344
                 //
                 var branchedMatchers = operand.map(function (criterion) {
-                  // 345
-                  // XXX handle $all/$elemMatch combination                                                                        // 346
+                  // 346
+                  // XXX handle $all/$elemMatch combination                                                                        // 347
                   if (isOperatorObject(criterion)) {
-                    // 347
-                    throw Error('no $ expressions in $all'); // 348
-                  } // This is always a regexp or equality selector.                                                               // 349
+                    // 348
+                    throw Error('no $ expressions in $all'); // 349
+                  } // This is always a regexp or equality selector.                                                               // 350
                   //
                   //
-                  return compileValueSelector(criterion, matcher); // 352
-                }); // andBranchedMatchers does NOT require all selectors to return true on the                                    // 353
-                // SAME branch.                                                                                                    // 356
+                  return compileValueSelector(criterion, matcher); // 353
+                }); // andBranchedMatchers does NOT require all selectors to return true on the                                    // 354
+                // SAME branch.                                                                                                    // 357
                 //
-                return andBranchedMatchers(branchedMatchers); // 357
-              }, // 358
+                return andBranchedMatchers(branchedMatchers); // 358
+              }, // 359
               $near: function (operand, valueSelector, matcher, isRoot) {
-                // 359
+                // 360
                 if (!isRoot) {
-                  // 360
-                  throw Error('$near can\'t be inside another $ operator'); // 361
-                } // 362
+                  // 361
+                  throw Error('$near can\'t be inside another $ operator'); // 362
+                } // 363
                 //
-                matcher._hasGeoQuery = true; // There are two kinds of geodata in MongoDB: legacy coordinate pairs and             // 364
-                // GeoJSON. They use different distance metrics, too. GeoJSON queries are                                          // 367
-                // marked with a $geometry property, though legacy coordinates can be                                              // 368
-                // matched using $geometry.                                                                                        // 369
+                matcher._hasGeoQuery = true; // There are two kinds of geodata in MongoDB: legacy coordinate pairs and             // 365
+                // GeoJSON. They use different distance metrics, too. GeoJSON queries are                                          // 368
+                // marked with a $geometry property, though legacy coordinates can be                                              // 369
+                // matched using $geometry.                                                                                        // 370
                 //
                 var maxDistance = void 0,
-                    // 370
+                    // 371
                 point = void 0,
-                    // 370
-                distance = void 0; // 370
+                    // 371
+                distance = void 0; // 371
                 //
                 if (LocalCollection._isPlainObject(operand) && hasOwn.call(operand, '$geometry')) {
-                  // 371
-                  // GeoJSON "2dsphere" mode.                                                                                      // 372
-                  maxDistance = operand.$maxDistance; // 373
-                  point = operand.$geometry; // 374
+                  // 372
+                  // GeoJSON "2dsphere" mode.                                                                                      // 373
+                  maxDistance = operand.$maxDistance; // 374
+                  point = operand.$geometry; // 375
                   //
                   distance = function (value) {
-                    // 375
-                    // XXX: for now, we don't calculate the actual distance between, say,                                          // 376
-                    // polygon and circle. If people care about this use-case it will get                                          // 377
-                    // a priority.                                                                                                 // 378
+                    // 376
+                    // XXX: for now, we don't calculate the actual distance between, say,                                          // 377
+                    // polygon and circle. If people care about this use-case it will get                                          // 378
+                    // a priority.                                                                                                 // 379
                     if (!value) {
-                      // 379
-                      return null; // 380
-                    } // 381
+                      // 380
+                      return null; // 381
+                    } // 382
                     //
                     if (!value.type) {
-                      // 383
-                      return GeoJSON.pointDistance(point, { // 384
-                        type: 'Point', // 386
-                        coordinates: pointToArray(value) // 386
-                      }); // 386
-                    } // 388
+                      // 384
+                      return GeoJSON.pointDistance(point, { // 385
+                        type: 'Point', // 387
+                        coordinates: pointToArray(value) // 387
+                      }); // 387
+                    } // 389
                     //
                     if (value.type === 'Point') {
-                      // 390
-                      return GeoJSON.pointDistance(point, value); // 391
-                    } // 392
+                      // 391
+                      return GeoJSON.pointDistance(point, value); // 392
+                    } // 393
                     //
-                    return GeoJSON.geometryWithinRadius(value, point, maxDistance) ? 0 : maxDistance + 1; // 394
-                  }; // 397
+                    return GeoJSON.geometryWithinRadius(value, point, maxDistance) ? 0 : maxDistance + 1; // 395
+                  }; // 398
                 } else {
-                  // 398
-                  maxDistance = valueSelector.$maxDistance; // 399
+                  // 399
+                  maxDistance = valueSelector.$maxDistance; // 400
                   //
                   if (!isIndexable(operand)) {
-                    // 401
-                    throw Error('$near argument must be coordinate pair or GeoJSON'); // 402
-                  } // 403
+                    // 402
+                    throw Error('$near argument must be coordinate pair or GeoJSON'); // 403
+                  } // 404
                   //
-                  point = pointToArray(operand); // 405
+                  point = pointToArray(operand); // 406
                   //
                   distance = function (value) {
-                    // 407
+                    // 408
                     if (!isIndexable(value)) {
-                      // 408
-                      return null; // 409
-                    } // 410
+                      // 409
+                      return null; // 410
+                    } // 411
                     //
-                    return distanceCoordinatePairs(point, value); // 412
-                  }; // 413
-                } // 414
+                    return distanceCoordinatePairs(point, value); // 413
+                  }; // 414
+                } // 415
                 //
                 return function (branchedValues) {
-                  // 416
-                  // There might be multiple points in the document that match the given                                           // 417
-                  // field. Only one of them needs to be within $maxDistance, but we need to                                       // 418
-                  // evaluate all of them and use the nearest one for the implicit sort                                            // 419
-                  // specifier. (That's why we can't just use ELEMENT_OPERATORS here.)                                             // 420
-                  //                                                                                                               // 421
-                  // Note: This differs from MongoDB's implementation, where a document will                                       // 422
-                  // actually show up *multiple times* in the result set, with one entry for                                       // 423
-                  // each within-$maxDistance branching point.                                                                     // 424
-                  var result = { // 425
-                    result: false // 425
-                  }; // 425
+                  // 417
+                  // There might be multiple points in the document that match the given                                           // 418
+                  // field. Only one of them needs to be within $maxDistance, but we need to                                       // 419
+                  // evaluate all of them and use the nearest one for the implicit sort                                            // 420
+                  // specifier. (That's why we can't just use ELEMENT_OPERATORS here.)                                             // 421
+                  //                                                                                                               // 422
+                  // Note: This differs from MongoDB's implementation, where a document will                                       // 423
+                  // actually show up *multiple times* in the result set, with one entry for                                       // 424
+                  // each within-$maxDistance branching point.                                                                     // 425
+                  var result = { // 426
+                    result: false // 426
+                  }; // 426
                   expandArraysInBranches(branchedValues).every(function (branch) {
-                    // 426
-                    // if operation is an update, don't skip branches, just return the first                                       // 427
-                    // one (#3599)                                                                                                 // 428
-                    var curDistance = void 0; // 429
+                    // 427
+                    // if operation is an update, don't skip branches, just return the first                                       // 428
+                    // one (#3599)                                                                                                 // 429
+                    var curDistance = void 0; // 430
                     //
                     if (!matcher._isUpdate) {
-                      // 430
+                      // 431
                       if (!((0, _typeof3.default)(branch.value) === 'object')) {
-                        // 431
-                        return true; // 432
-                      } // 433
+                        // 432
+                        return true; // 433
+                      } // 434
                       //
-                      curDistance = distance(branch.value); // Skip branches that aren't real points or are too far away.          // 435
+                      curDistance = distance(branch.value); // Skip branches that aren't real points or are too far away.          // 436
                       //
                       if (curDistance === null || curDistance > maxDistance) {
-                        // 438
-                        return true; // 439
-                      } // Skip anything that's a tie.                                                                             // 440
+                        // 439
+                        return true; // 440
+                      } // Skip anything that's a tie.                                                                             // 441
                       //
                       //
                       if (result.distance !== undefined && result.distance <= curDistance) {
-                        // 443
-                        return true; // 444
-                      } // 445
-                    } // 446
+                        // 444
+                        return true; // 445
+                      } // 446
+                    } // 447
                     //
-                    result.result = true; // 448
-                    result.distance = curDistance; // 449
+                    result.result = true; // 449
+                    result.distance = curDistance; // 450
                     //
                     if (branch.arrayIndices) {
-                      // 451
-                      result.arrayIndices = branch.arrayIndices; // 452
+                      // 452
+                      result.arrayIndices = branch.arrayIndices; // 453
                     } else {
-                      // 453
-                      delete result.arrayIndices; // 454
-                    } // 455
+                      // 454
+                      delete result.arrayIndices; // 455
+                    } // 456
                     //
-                    return !matcher._isUpdate; // 457
-                  }); // 458
-                  return result; // 460
-                }; // 461
-              } // 462
-            }; // NB: We are cheating and using this function to implement 'AND' for both                                          // 292
-            // 'document matchers' and 'branched matchers'. They both return result objects                                        // 466
-            // but the argument is different: for the former it's a whole doc, whereas for                                         // 467
-            // the latter it's an array of 'branched values'.                                                                      // 468
+                    return !matcher._isUpdate; // 458
+                  }); // 459
+                  return result; // 461
+                }; // 462
+              } // 463
+            }; // NB: We are cheating and using this function to implement 'AND' for both                                          // 293
+            // 'document matchers' and 'branched matchers'. They both return result objects                                        // 467
+            // but the argument is different: for the former it's a whole doc, whereas for                                         // 468
+            // the latter it's an array of 'branched values'.                                                                      // 469
             //
             function andSomeMatchers(subMatchers) {
-              // 469
+              // 470
               if (subMatchers.length === 0) {
-                // 470
-                return everythingMatcher; // 471
-              } // 472
+                // 471
+                return everythingMatcher; // 472
+              } // 473
               //
               if (subMatchers.length === 1) {
-                // 474
-                return subMatchers[0]; // 475
-              } // 476
+                // 475
+                return subMatchers[0]; // 476
+              } // 477
               //
               return function (docOrBranches) {
-                // 478
-                var match = {}; // 479
+                // 479
+                var match = {}; // 480
                 match.result = subMatchers.every(function (fn) {
-                  // 480
-                  var subResult = fn(docOrBranches); // Copy a 'distance' number out of the first sub-matcher that has             // 481
-                  // one. Yes, this means that if there are multiple $near fields in a                                             // 484
-                  // query, something arbitrary happens; this appears to be consistent with                                        // 485
-                  // Mongo.                                                                                                        // 486
+                  // 481
+                  var subResult = fn(docOrBranches); // Copy a 'distance' number out of the first sub-matcher that has             // 482
+                  // one. Yes, this means that if there are multiple $near fields in a                                             // 485
+                  // query, something arbitrary happens; this appears to be consistent with                                        // 486
+                  // Mongo.                                                                                                        // 487
                   //
                   if (subResult.result && subResult.distance !== undefined && match.distance === undefined) {
-                    // 487
-                    match.distance = subResult.distance; // 490
-                  } // Similarly, propagate arrayIndices from sub-matchers... but to match                                         // 491
-                  // MongoDB behavior, this time the *last* sub-matcher with arrayIndices                                          // 494
-                  // wins.                                                                                                         // 495
+                    // 488
+                    match.distance = subResult.distance; // 491
+                  } // Similarly, propagate arrayIndices from sub-matchers... but to match                                         // 492
+                  // MongoDB behavior, this time the *last* sub-matcher with arrayIndices                                          // 495
+                  // wins.                                                                                                         // 496
                   //
                   //
                   if (subResult.result && subResult.arrayIndices) {
-                    // 496
-                    match.arrayIndices = subResult.arrayIndices; // 497
-                  } // 498
+                    // 497
+                    match.arrayIndices = subResult.arrayIndices; // 498
+                  } // 499
                   //
-                  return subResult.result; // 500
-                }); // If we didn't actually match, forget any extra metadata we came up with.                                     // 501
+                  return subResult.result; // 501
+                }); // If we didn't actually match, forget any extra metadata we came up with.                                     // 502
                 //
                 if (!match.result) {
-                  // 504
-                  delete match.distance; // 505
-                  delete match.arrayIndices; // 506
-                } // 507
+                  // 505
+                  delete match.distance; // 506
+                  delete match.arrayIndices; // 507
+                } // 508
                 //
-                return match; // 509
-              }; // 510
-            } // 511
+                return match; // 510
+              }; // 511
+            } // 512
             //
-            var andDocumentMatchers = andSomeMatchers; // 513
-            var andBranchedMatchers = andSomeMatchers; // 514
+            var andDocumentMatchers = andSomeMatchers; // 514
+            var andBranchedMatchers = andSomeMatchers; // 515
             //
             function compileArrayOfDocumentSelectors(selectors, matcher, inElemMatch) {
-              // 516
+              // 517
               if (!Array.isArray(selectors) || selectors.length === 0) {
-                // 517
-                throw Error('$and/$or/$nor must be nonempty array'); // 518
-              } // 519
+                // 518
+                throw Error('$and/$or/$nor must be nonempty array'); // 519
+              } // 520
               //
               return selectors.map(function (subSelector) {
-                // 521
+                // 522
                 if (!LocalCollection._isPlainObject(subSelector)) {
-                  // 522
-                  throw Error('$or/$and/$nor entries need to be full objects'); // 523
-                } // 524
+                  // 523
+                  throw Error('$or/$and/$nor entries need to be full objects'); // 524
+                } // 525
                 //
-                return compileDocumentSelector(subSelector, matcher, { // 526
-                  inElemMatch: inElemMatch // 526
-                }); // 526
-              }); // 527
-            } // Takes in a selector that could match a full document (eg, the original                                            // 528
-            // selector). Returns a function mapping document->result object.                                                      // 531
-            //                                                                                                                     // 532
-            // matcher is the Matcher object we are compiling.                                                                     // 533
-            //                                                                                                                     // 534
-            // If this is the root document selector (ie, not wrapped in $and or the like),                                        // 535
-            // then isRoot is true. (This is used by $near.)                                                                       // 536
+                return compileDocumentSelector(subSelector, matcher, { // 527
+                  inElemMatch: inElemMatch // 527
+                }); // 527
+              }); // 528
+            } // Takes in a selector that could match a full document (eg, the original                                            // 529
+            // selector). Returns a function mapping document->result object.                                                      // 532
+            //                                                                                                                     // 533
+            // matcher is the Matcher object we are compiling.                                                                     // 534
+            //                                                                                                                     // 535
+            // If this is the root document selector (ie, not wrapped in $and or the like),                                        // 536
+            // then isRoot is true. (This is used by $near.)                                                                       // 537
             //
             //
             function compileDocumentSelector(docSelector, matcher) {
-              // 537
-              var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {}; // 537
+              // 538
+              var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {}; // 538
               var docMatchers = Object.keys(docSelector).map(function (key) {
-                // 538
-                var subSelector = docSelector[key]; // 539
+                // 539
+                var subSelector = docSelector[key]; // 540
                 //
                 if (key.substr(0, 1) === '$') {
-                  // 541
-                  // Outer operators are either logical operators (they recurse back into                                          // 542
-                  // this function), or $where.                                                                                    // 543
+                  // 542
+                  // Outer operators are either logical operators (they recurse back into                                          // 543
+                  // this function), or $where.                                                                                    // 544
                   if (!hasOwn.call(LOGICAL_OPERATORS, key)) {
-                    // 544
-                    throw new Error("Unrecognized logical operator: " + key); // 545
-                  } // 546
+                    // 545
+                    throw new Error("Unrecognized logical operator: " + key); // 546
+                  } // 547
                   //
-                  matcher._isSimple = false; // 548
-                  return LOGICAL_OPERATORS[key](subSelector, matcher, options.inElemMatch); // 549
-                } // Record this path, but only if we aren't in an elemMatcher, since in an                                        // 550
-                // elemMatch this is a path inside an object in an array, not in the doc                                           // 553
-                // root.                                                                                                           // 554
+                  matcher._isSimple = false; // 549
+                  return LOGICAL_OPERATORS[key](subSelector, matcher, options.inElemMatch); // 550
+                } // Record this path, but only if we aren't in an elemMatcher, since in an                                        // 551
+                // elemMatch this is a path inside an object in an array, not in the doc                                           // 554
+                // root.                                                                                                           // 555
                 //
                 //
                 if (!options.inElemMatch) {
-                  // 555
-                  matcher._recordPathUsed(key); // 556
-                } // Don't add a matcher if subSelector is a function -- this is to match                                          // 557
-                // the behavior of Meteor on the server (inherited from the node mongodb                                           // 560
-                // driver), which is to ignore any part of a selector which is a function.                                         // 561
+                  // 556
+                  matcher._recordPathUsed(key); // 557
+                } // Don't add a matcher if subSelector is a function -- this is to match                                          // 558
+                // the behavior of Meteor on the server (inherited from the node mongodb                                           // 561
+                // driver), which is to ignore any part of a selector which is a function.                                         // 562
                 //
                 //
                 if (typeof subSelector === 'function') {
-                  // 562
-                  return undefined; // 563
-                } // 564
+                  // 563
+                  return undefined; // 564
+                } // 565
                 //
-                var lookUpByIndex = makeLookupFunction(key); // 566
-                var valueMatcher = compileValueSelector(subSelector, matcher, options.isRoot); // 567
+                var lookUpByIndex = makeLookupFunction(key); // 567
+                var valueMatcher = compileValueSelector(subSelector, matcher, options.isRoot); // 568
                 return function (doc) {
-                  // 573
-                  return valueMatcher(lookUpByIndex(doc)); // 573
-                }; // 573
-              }).filter(Boolean); // 574
-              return andDocumentMatchers(docMatchers); // 576
-            } // 577
+                  // 574
+                  return valueMatcher(lookUpByIndex(doc)); // 574
+                }; // 574
+              }).filter(Boolean); // 575
+              return andDocumentMatchers(docMatchers); // 577
+            } // 578
             //
-            // Takes in a selector that could match a key-indexed value in a document; eg,                                         // 579
-            // {$gt: 5, $lt: 9}, or a regular expression, or any non-expression object (to                                         // 580
-            // indicate equality).  Returns a branched matcher: a function mapping                                                 // 581
-            // [branched value]->result object.                                                                                    // 582
+            // Takes in a selector that could match a key-indexed value in a document; eg,                                         // 580
+            // {$gt: 5, $lt: 9}, or a regular expression, or any non-expression object (to                                         // 581
+            // indicate equality).  Returns a branched matcher: a function mapping                                                 // 582
+            // [branched value]->result object.                                                                                    // 583
             function compileValueSelector(valueSelector, matcher, isRoot) {
-              // 583
+              // 584
               if (valueSelector instanceof RegExp) {
-                // 584
-                matcher._isSimple = false; // 585
-                return convertElementMatcherToBranchedMatcher(regexpElementMatcher(valueSelector)); // 586
-              } // 589
+                // 585
+                matcher._isSimple = false; // 586
+                return convertElementMatcherToBranchedMatcher(regexpElementMatcher(valueSelector)); // 587
+              } // 590
               //
               if (isOperatorObject(valueSelector)) {
-                // 591
-                return operatorBranchedMatcher(valueSelector, matcher, isRoot); // 592
-              } // 593
+                // 592
+                return operatorBranchedMatcher(valueSelector, matcher, isRoot); // 593
+              } // 594
               //
-              return convertElementMatcherToBranchedMatcher(equalityElementMatcher(valueSelector)); // 595
-            } // Given an element matcher (which evaluates a single value), returns a branched                                     // 598
-            // value (which evaluates the element matcher on all the branches and returns a                                        // 601
-            // more structured return value possibly including arrayIndices).                                                      // 602
+              return convertElementMatcherToBranchedMatcher(equalityElementMatcher(valueSelector)); // 596
+            } // Given an element matcher (which evaluates a single value), returns a branched                                     // 599
+            // value (which evaluates the element matcher on all the branches and returns a                                        // 602
+            // more structured return value possibly including arrayIndices).                                                      // 603
             //
             //
             function convertElementMatcherToBranchedMatcher(elementMatcher) {
-              // 603
-              var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {}; // 603
+              // 604
+              var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {}; // 604
               return function (branches) {
-                // 604
+                // 605
                 var expanded = options.dontExpandLeafArrays ? branches : expandArraysInBranches(branches, options.dontIncludeLeafArrays);
-                var match = {}; // 609
+                var match = {}; // 610
                 match.result = expanded.some(function (element) {
-                  // 610
+                  // 611
                   var matched = elementMatcher(element.value); // Special case for $elemMatch: it means "true, and use this as an array
-                  // index if I didn't already have one".                                                                          // 614
+                  // index if I didn't already have one".                                                                          // 615
                   //
                   if (typeof matched === 'number') {
-                    // 615
-                    // XXX This code dates from when we only stored a single array index                                           // 616
-                    // (for the outermost array). Should we be also including deeper array                                         // 617
-                    // indices from the $elemMatch match?                                                                          // 618
+                    // 616
+                    // XXX This code dates from when we only stored a single array index                                           // 617
+                    // (for the outermost array). Should we be also including deeper array                                         // 618
+                    // indices from the $elemMatch match?                                                                          // 619
                     if (!element.arrayIndices) {
-                      // 619
-                      element.arrayIndices = [matched]; // 620
-                    } // 621
+                      // 620
+                      element.arrayIndices = [matched]; // 621
+                    } // 622
                     //
-                    matched = true; // 623
-                  } // If some element matched, and it's tagged with array indices, include                                        // 624
-                  // those indices in our result object.                                                                           // 627
+                    matched = true; // 624
+                  } // If some element matched, and it's tagged with array indices, include                                        // 625
+                  // those indices in our result object.                                                                           // 628
                   //
                   //
                   if (matched && element.arrayIndices) {
-                    // 628
-                    match.arrayIndices = element.arrayIndices; // 629
-                  } // 630
+                    // 629
+                    match.arrayIndices = element.arrayIndices; // 630
+                  } // 631
                   //
-                  return matched; // 632
-                }); // 633
-                return match; // 635
-              }; // 636
-            } // Helpers for $near.                                                                                                // 637
+                  return matched; // 633
+                }); // 634
+                return match; // 636
+              }; // 637
+            } // Helpers for $near.                                                                                                // 638
             //
             //
             function distanceCoordinatePairs(a, b) {
-              // 640
-              var pointA = pointToArray(a); // 641
-              var pointB = pointToArray(b); // 642
-              return Math.hypot(pointA[0] - pointB[0], pointA[1] - pointB[1]); // 644
-            } // Takes something that is not an operator object and returns an element matcher                                     // 645
-            // for equality with that thing.                                                                                       // 648
+              // 641
+              var pointA = pointToArray(a); // 642
+              var pointB = pointToArray(b); // 643
+              return Math.hypot(pointA[0] - pointB[0], pointA[1] - pointB[1]); // 645
+            } // Takes something that is not an operator object and returns an element matcher                                     // 646
+            // for equality with that thing.                                                                                       // 649
             //
             //
             function equalityElementMatcher(elementSelector) {
-              // 649
+              // 650
               if (isOperatorObject(elementSelector)) {
-                // 650
-                throw Error('Can\'t create equalityValueSelector for operator object'); // 651
-              } // Special-case: null and undefined are equal (if you got undefined in there                                       // 652
-              // somewhere, or if you got it due to some branch being non-existent in the                                          // 655
-              // weird special case), even though they aren't with EJSON.equals.                                                   // 656
-              // undefined or null                                                                                                 // 657
+                // 651
+                throw Error('Can\'t create equalityValueSelector for operator object'); // 652
+              } // Special-case: null and undefined are equal (if you got undefined in there                                       // 653
+              // somewhere, or if you got it due to some branch being non-existent in the                                          // 656
+              // weird special case), even though they aren't with EJSON.equals.                                                   // 657
+              // undefined or null                                                                                                 // 658
               //
               //
               if (elementSelector == null) {
-                // 658
+                // 659
                 return function (value) {
-                  // 659
-                  return value == null; // 659
-                }; // 659
-              } // 660
+                  // 660
+                  return value == null; // 660
+                }; // 660
+              } // 661
               //
               return function (value) {
-                // 662
-                return LocalCollection._f._equal(elementSelector, value); // 662
-              }; // 662
-            } // 663
+                // 663
+                return LocalCollection._f._equal(elementSelector, value); // 663
+              }; // 663
+            } // 664
             //
             function everythingMatcher(docOrBranchedValues) {
-              // 665
-              return { // 666
-                result: true // 666
-              }; // 666
-            } // 667
+              // 666
+              return { // 667
+                result: true // 667
+              }; // 667
+            } // 668
             //
             function expandArraysInBranches(branches, skipTheArrays) {
-              // 669
-              var branchesOut = []; // 670
+              // 670
+              var branchesOut = []; // 671
               branches.forEach(function (branch) {
-                // 672
+                // 673
                 var thisIsArray = Array.isArray(branch.value); // We include the branch itself, *UNLESS* we it's an array that we're going
-                // to iterate and we're told to skip arrays.  (That's right, we include some                                       // 676
-                // arrays even skipTheArrays is true: these are arrays that were found via                                         // 677
-                // explicit numerical indices.)                                                                                    // 678
+                // to iterate and we're told to skip arrays.  (That's right, we include some                                       // 677
+                // arrays even skipTheArrays is true: these are arrays that were found via                                         // 678
+                // explicit numerical indices.)                                                                                    // 679
                 //
                 if (!(skipTheArrays && thisIsArray && !branch.dontIterate)) {
-                  // 679
-                  branchesOut.push({ // 680
-                    arrayIndices: branch.arrayIndices, // 680
-                    value: branch.value // 680
-                  }); // 680
-                } // 681
+                  // 680
+                  branchesOut.push({ // 681
+                    arrayIndices: branch.arrayIndices, // 681
+                    value: branch.value // 681
+                  }); // 681
+                } // 682
                 //
                 if (thisIsArray && !branch.dontIterate) {
-                  // 683
+                  // 684
                   branch.value.forEach(function (value, i) {
-                    // 684
-                    branchesOut.push({ // 685
-                      arrayIndices: (branch.arrayIndices || []).concat(i), // 686
-                      value: value // 687
-                    }); // 685
-                  }); // 689
-                } // 690
-              }); // 691
-              return branchesOut; // 693
-            } // 694
+                    // 685
+                    branchesOut.push({ // 686
+                      arrayIndices: (branch.arrayIndices || []).concat(i), // 687
+                      value: value // 688
+                    }); // 686
+                  }); // 690
+                } // 691
+              }); // 692
+              return branchesOut; // 694
+            } // 695
             //
-            // Helpers for $bitsAllSet/$bitsAnySet/$bitsAllClear/$bitsAnyClear.                                                    // 696
+            // Helpers for $bitsAllSet/$bitsAnySet/$bitsAllClear/$bitsAnyClear.                                                    // 697
             function getOperandBitmask(operand, selector) {
-              // 697
-              // numeric bitmask                                                                                                   // 698
-              // You can provide a numeric bitmask to be matched against the operand field.                                        // 699
-              // It must be representable as a non-negative 32-bit signed integer.                                                 // 700
-              // Otherwise, $bitsAllSet will return an error.                                                                      // 701
+              // 698
+              // numeric bitmask                                                                                                   // 699
+              // You can provide a numeric bitmask to be matched against the operand field.                                        // 700
+              // It must be representable as a non-negative 32-bit signed integer.                                                 // 701
+              // Otherwise, $bitsAllSet will return an error.                                                                      // 702
               if (Number.isInteger(operand) && operand >= 0) {
-                // 702
-                return new Uint8Array(new Int32Array([operand]).buffer); // 703
-              } // bindata bitmask                                                                                                 // 704
-              // You can also use an arbitrarily large BinData instance as a bitmask.                                              // 707
+                // 703
+                return new Uint8Array(new Int32Array([operand]).buffer); // 704
+              } // bindata bitmask                                                                                                 // 705
+              // You can also use an arbitrarily large BinData instance as a bitmask.                                              // 708
               //
               //
               if (EJSON.isBinary(operand)) {
-                // 708
-                return new Uint8Array(operand.buffer); // 709
-              } // position list                                                                                                   // 710
-              // If querying a list of bit positions, each <position> must be a non-negative                                       // 713
-              // integer. Bit positions start at 0 from the least significant bit.                                                 // 714
+                // 709
+                return new Uint8Array(operand.buffer); // 710
+              } // position list                                                                                                   // 711
+              // If querying a list of bit positions, each <position> must be a non-negative                                       // 714
+              // integer. Bit positions start at 0 from the least significant bit.                                                 // 715
               //
               //
               if (Array.isArray(operand) && operand.every(function (x) {
-                // 715
-                return Number.isInteger(x) && x >= 0; // 716
-              })) {
                 // 716
-                var buffer = new ArrayBuffer((Math.max.apply(Math, (0, _toConsumableArray3.default)(operand)) >> 3) + 1); // 717
-                var view = new Uint8Array(buffer); // 718
+                return Number.isInteger(x) && x >= 0; // 717
+              })) {
+                // 717
+                var buffer = new ArrayBuffer((Math.max.apply(Math, (0, _toConsumableArray3.default)(operand)) >> 3) + 1); // 718
+                var view = new Uint8Array(buffer); // 719
                 operand.forEach(function (x) {
-                  // 720
-                  view[x >> 3] |= 1 << (x & 0x7); // 721
-                }); // 722
-                return view; // 724
-              } // bad operand                                                                                                     // 725
+                  // 721
+                  view[x >> 3] |= 1 << (x & 0x7); // 722
+                }); // 723
+                return view; // 725
+              } // bad operand                                                                                                     // 726
               //
               //
               throw Error("operand to " + selector + " must be a numeric bitmask (representable as a " + 'non-negative 32-bit signed integer), a bindata bitmask or an array with ' + 'bit positions (non-negative integers)');
-            } // 733
+            } // 734
             //
             function getValueBitmask(value, length) {
-              // 735
-              // The field value must be either numerical or a BinData instance. Otherwise,                                        // 736
-              // $bits... will not match the current document.                                                                     // 737
-              // numerical                                                                                                         // 739
+              // 736
+              // The field value must be either numerical or a BinData instance. Otherwise,                                        // 737
+              // $bits... will not match the current document.                                                                     // 738
+              // numerical                                                                                                         // 740
               if (Number.isSafeInteger(value)) {
-                // 740
-                // $bits... will not match numerical values that cannot be represented as a                                        // 741
-                // signed 64-bit integer. This can be the case if a value is either too                                            // 742
-                // large or small to fit in a signed 64-bit integer, or if it has a                                                // 743
-                // fractional component.                                                                                           // 744
-                var buffer = new ArrayBuffer(Math.max(length, 2 * Uint32Array.BYTES_PER_ELEMENT)); // 745
-                var view = new Uint32Array(buffer, 0, 2); // 749
-                view[0] = value % ((1 << 16) * (1 << 16)) | 0; // 750
-                view[1] = value / ((1 << 16) * (1 << 16)) | 0; // sign extension                                                   // 751
+                // 741
+                // $bits... will not match numerical values that cannot be represented as a                                        // 742
+                // signed 64-bit integer. This can be the case if a value is either too                                            // 743
+                // large or small to fit in a signed 64-bit integer, or if it has a                                                // 744
+                // fractional component.                                                                                           // 745
+                var buffer = new ArrayBuffer(Math.max(length, 2 * Uint32Array.BYTES_PER_ELEMENT)); // 746
+                var view = new Uint32Array(buffer, 0, 2); // 750
+                view[0] = value % ((1 << 16) * (1 << 16)) | 0; // 751
+                view[1] = value / ((1 << 16) * (1 << 16)) | 0; // sign extension                                                   // 752
                 //
                 if (value < 0) {
-                  // 754
-                  view = new Uint8Array(buffer, 2); // 755
+                  // 755
+                  view = new Uint8Array(buffer, 2); // 756
                   view.forEach(function (byte, i) {
-                    // 756
-                    view[i] = 0xff; // 757
-                  }); // 758
-                } // 759
+                    // 757
+                    view[i] = 0xff; // 758
+                  }); // 759
+                } // 760
                 //
-                return new Uint8Array(buffer); // 761
-              } // bindata                                                                                                         // 762
+                return new Uint8Array(buffer); // 762
+              } // bindata                                                                                                         // 763
               //
               //
               if (EJSON.isBinary(value)) {
-                // 765
-                return new Uint8Array(value.buffer); // 766
-              } // no match                                                                                                        // 767
+                // 766
+                return new Uint8Array(value.buffer); // 767
+              } // no match                                                                                                        // 768
               //
               //
-              return false; // 770
-            } // Actually inserts a key value into the selector document                                                           // 771
-            // However, this checks there is no ambiguity in setting                                                               // 774
-            // the value for the given key, throws otherwise                                                                       // 775
+              return false; // 771
+            } // Actually inserts a key value into the selector document                                                           // 772
+            // However, this checks there is no ambiguity in setting                                                               // 775
+            // the value for the given key, throws otherwise                                                                       // 776
             //
             //
             function insertIntoDocument(document, key, value) {
-              // 776
+              // 777
               Object.keys(document).forEach(function (existingKey) {
-                // 777
+                // 778
                 if (existingKey.length > key.length && existingKey.indexOf(key) === 0 || key.length > existingKey.length && key.indexOf(existingKey) === 0) {
                   throw new Error("cannot infer query fields to set, both paths '" + existingKey + "' and " + ("'" + key + "' are matched"));
                 } else if (existingKey === key) {
-                  // 786
-                  throw new Error("cannot infer query fields to set, path '" + key + "' is matched twice"); // 787
-                } // 790
-              }); // 791
-              document[key] = value; // 793
-            } // Returns a branched matcher that matches iff the given matcher does not.                                           // 794
-            // Note that this implicitly "deMorganizes" the wrapped function.  ie, it                                              // 797
-            // means that ALL branch values need to fail to match innerBranchedMatcher.                                            // 798
+                  // 787
+                  throw new Error("cannot infer query fields to set, path '" + key + "' is matched twice"); // 788
+                } // 791
+              }); // 792
+              document[key] = value; // 794
+            } // Returns a branched matcher that matches iff the given matcher does not.                                           // 795
+            // Note that this implicitly "deMorganizes" the wrapped function.  ie, it                                              // 798
+            // means that ALL branch values need to fail to match innerBranchedMatcher.                                            // 799
             //
             //
             function invertBranchedMatcher(branchedMatcher) {
-              // 799
+              // 800
               return function (branchValues) {
-                // 800
-                // We explicitly choose to strip arrayIndices here: it doesn't make sense to                                       // 801
-                // say "update the array element that does not match something", at least                                          // 802
-                // in mongo-land.                                                                                                  // 803
-                return { // 804
-                  result: !branchedMatcher(branchValues).result // 804
-                }; // 804
-              }; // 805
-            } // 806
+                // 801
+                // We explicitly choose to strip arrayIndices here: it doesn't make sense to                                       // 802
+                // say "update the array element that does not match something", at least                                          // 803
+                // in mongo-land.                                                                                                  // 804
+                return { // 805
+                  result: !branchedMatcher(branchValues).result // 805
+                }; // 805
+              }; // 806
+            } // 807
             //
             function isIndexable(obj) {
-              // 808
-              return Array.isArray(obj) || LocalCollection._isPlainObject(obj); // 809
-            } // 810
+              // 809
+              return Array.isArray(obj) || LocalCollection._isPlainObject(obj); // 810
+            } // 811
             //
             function isNumericKey(s) {
-              // 812
-              return (/^[0-9]+$/.test(s) // 813
+              // 813
+              return (/^[0-9]+$/.test(s) // 814
 
-              ); // 813
-            } // 814
+              ); // 814
+            } // 815
             //
             function isOperatorObject(valueSelector, inconsistentOK) {
-              // 819
+              // 820
               if (!LocalCollection._isPlainObject(valueSelector)) {
-                // 820
-                return false; // 821
-              } // 822
+                // 821
+                return false; // 822
+              } // 823
               //
-              var theseAreOperators = undefined; // 824
+              var theseAreOperators = undefined; // 825
               Object.keys(valueSelector).forEach(function (selKey) {
-                // 825
-                var thisIsOperator = selKey.substr(0, 1) === '$'; // 826
+                // 826
+                var thisIsOperator = selKey.substr(0, 1) === '$'; // 827
                 //
                 if (theseAreOperators === undefined) {
-                  // 828
-                  theseAreOperators = thisIsOperator; // 829
+                  // 829
+                  theseAreOperators = thisIsOperator; // 830
                 } else if (theseAreOperators !== thisIsOperator) {
-                  // 830
+                  // 831
                   if (!inconsistentOK) {
-                    // 831
-                    throw new Error("Inconsistent operator: " + JSON.stringify(valueSelector)); // 832
-                  } // 835
+                    // 832
+                    throw new Error("Inconsistent operator: " + JSON.stringify(valueSelector)); // 833
+                  } // 836
                   //
-                  theseAreOperators = false; // 837
-                } // 838
-              }); // 839
-              return !!theseAreOperators; // {} has no operators                                                                   // 841
-            } // 842
+                  theseAreOperators = false; // 838
+                } // 839
+              }); // 840
+              return !!theseAreOperators; // {} has no operators                                                                   // 842
+            } // 843
             //
-            // Helper for $lt/$gt/$lte/$gte.                                                                                       // 844
+            // Helper for $lt/$gt/$lte/$gte.                                                                                       // 845
             function makeInequality(cmpValueComparator) {
-              // 845
-              return { // 846
+              // 846
+              return { // 847
                 compileElementSelector: function (operand) {
-                  // 847
-                  // Arrays never compare false with non-arrays for any inequality.                                                // 848
-                  // XXX This was behavior we observed in pre-release MongoDB 2.5, but                                             // 849
-                  //     it seems to have been reverted.                                                                           // 850
-                  //     See https://jira.mongodb.org/browse/SERVER-11444                                                          // 851
+                  // 848
+                  // Arrays never compare false with non-arrays for any inequality.                                                // 849
+                  // XXX This was behavior we observed in pre-release MongoDB 2.5, but                                             // 850
+                  //     it seems to have been reverted.                                                                           // 851
+                  //     See https://jira.mongodb.org/browse/SERVER-11444                                                          // 852
                   if (Array.isArray(operand)) {
-                    // 852
+                    // 853
                     return function () {
-                      // 853
-                      return false; // 853
-                    }; // 853
-                  } // Special case: consider undefined and null the same (so true with                                            // 854
-                  // $gte/$lte).                                                                                                   // 857
+                      // 854
+                      return false; // 854
+                    }; // 854
+                  } // Special case: consider undefined and null the same (so true with                                            // 855
+                  // $gte/$lte).                                                                                                   // 858
                   //
                   //
                   if (operand === undefined) {
-                    // 858
-                    operand = null; // 859
-                  } // 860
+                    // 859
+                    operand = null; // 860
+                  } // 861
                   //
-                  var operandType = LocalCollection._f._type(operand); // 862
+                  var operandType = LocalCollection._f._type(operand); // 863
                   //
                   return function (value) {
-                    // 864
+                    // 865
                     if (value === undefined) {
-                      // 865
-                      value = null; // 866
-                    } // Comparisons are never true among things of different type (except                                         // 867
-                    // null vs undefined).                                                                                         // 870
+                      // 866
+                      value = null; // 867
+                    } // Comparisons are never true among things of different type (except                                         // 868
+                    // null vs undefined).                                                                                         // 871
                     //
                     //
                     if (LocalCollection._f._type(value) !== operandType) {
-                      // 871
-                      return false; // 872
-                    } // 873
+                      // 872
+                      return false; // 873
+                    } // 874
                     //
-                    return cmpValueComparator(LocalCollection._f._cmp(value, operand)); // 875
-                  }; // 876
-                } // 877
-              }; // 846
-            } // makeLookupFunction(key) returns a lookup function.                                                                // 879
-            //                                                                                                                     // 882
-            // A lookup function takes in a document and returns an array of matching                                              // 883
-            // branches.  If no arrays are found while looking up the key, this array will                                         // 884
-            // have exactly one branches (possibly 'undefined', if some segment of the key                                         // 885
-            // was not found).                                                                                                     // 886
-            //                                                                                                                     // 887
-            // If arrays are found in the middle, this can have more than one element, since                                       // 888
-            // we 'branch'. When we 'branch', if there are more key segments to look up,                                           // 889
-            // then we only pursue branches that are plain objects (not arrays or scalars).                                        // 890
-            // This means we can actually end up with no branches!                                                                 // 891
-            //                                                                                                                     // 892
-            // We do *NOT* branch on arrays that are found at the end (ie, at the last                                             // 893
-            // dotted member of the key). We just return that array; if you want to                                                // 894
-            // effectively 'branch' over the array's values, post-process the lookup                                               // 895
-            // function with expandArraysInBranches.                                                                               // 896
-            //                                                                                                                     // 897
-            // Each branch is an object with keys:                                                                                 // 898
-            //  - value: the value at the branch                                                                                   // 899
-            //  - dontIterate: an optional bool; if true, it means that 'value' is an array                                        // 900
-            //    that expandArraysInBranches should NOT expand. This specifically happens                                         // 901
-            //    when there is a numeric index in the key, and ensures the                                                        // 902
-            //    perhaps-surprising MongoDB behavior where {'a.0': 5} does NOT                                                    // 903
-            //    match {a: [[5]]}.                                                                                                // 904
-            //  - arrayIndices: if any array indexing was done during lookup (either due to                                        // 905
-            //    explicit numeric indices or implicit branching), this will be an array of                                        // 906
-            //    the array indices used, from outermost to innermost; it is falsey or                                             // 907
-            //    absent if no array index is used. If an explicit numeric index is used,                                          // 908
-            //    the index will be followed in arrayIndices by the string 'x'.                                                    // 909
-            //                                                                                                                     // 910
-            //    Note: arrayIndices is used for two purposes. First, it is used to                                                // 911
-            //    implement the '$' modifier feature, which only ever looks at its first                                           // 912
-            //    element.                                                                                                         // 913
-            //                                                                                                                     // 914
-            //    Second, it is used for sort key generation, which needs to be able to tell                                       // 915
-            //    the difference between different paths. Moreover, it needs to                                                    // 916
-            //    differentiate between explicit and implicit branching, which is why                                              // 917
-            //    there's the somewhat hacky 'x' entry: this means that explicit and                                               // 918
-            //    implicit array lookups will have different full arrayIndices paths. (That                                        // 919
-            //    code only requires that different paths have different arrayIndices; it                                          // 920
-            //    doesn't actually 'parse' arrayIndices. As an alternative, arrayIndices                                           // 921
-            //    could contain objects with flags like 'implicit', but I think that only                                          // 922
-            //    makes the code surrounding them more complex.)                                                                   // 923
-            //                                                                                                                     // 924
-            //    (By the way, this field ends up getting passed around a lot without                                              // 925
-            //    cloning, so never mutate any arrayIndices field/var in this package!)                                            // 926
-            //                                                                                                                     // 927
+                    return cmpValueComparator(LocalCollection._f._cmp(value, operand)); // 876
+                  }; // 877
+                } // 878
+              }; // 847
+            } // makeLookupFunction(key) returns a lookup function.                                                                // 880
+            //                                                                                                                     // 883
+            // A lookup function takes in a document and returns an array of matching                                              // 884
+            // branches.  If no arrays are found while looking up the key, this array will                                         // 885
+            // have exactly one branches (possibly 'undefined', if some segment of the key                                         // 886
+            // was not found).                                                                                                     // 887
+            //                                                                                                                     // 888
+            // If arrays are found in the middle, this can have more than one element, since                                       // 889
+            // we 'branch'. When we 'branch', if there are more key segments to look up,                                           // 890
+            // then we only pursue branches that are plain objects (not arrays or scalars).                                        // 891
+            // This means we can actually end up with no branches!                                                                 // 892
+            //                                                                                                                     // 893
+            // We do *NOT* branch on arrays that are found at the end (ie, at the last                                             // 894
+            // dotted member of the key). We just return that array; if you want to                                                // 895
+            // effectively 'branch' over the array's values, post-process the lookup                                               // 896
+            // function with expandArraysInBranches.                                                                               // 897
+            //                                                                                                                     // 898
+            // Each branch is an object with keys:                                                                                 // 899
+            //  - value: the value at the branch                                                                                   // 900
+            //  - dontIterate: an optional bool; if true, it means that 'value' is an array                                        // 901
+            //    that expandArraysInBranches should NOT expand. This specifically happens                                         // 902
+            //    when there is a numeric index in the key, and ensures the                                                        // 903
+            //    perhaps-surprising MongoDB behavior where {'a.0': 5} does NOT                                                    // 904
+            //    match {a: [[5]]}.                                                                                                // 905
+            //  - arrayIndices: if any array indexing was done during lookup (either due to                                        // 906
+            //    explicit numeric indices or implicit branching), this will be an array of                                        // 907
+            //    the array indices used, from outermost to innermost; it is falsey or                                             // 908
+            //    absent if no array index is used. If an explicit numeric index is used,                                          // 909
+            //    the index will be followed in arrayIndices by the string 'x'.                                                    // 910
+            //                                                                                                                     // 911
+            //    Note: arrayIndices is used for two purposes. First, it is used to                                                // 912
+            //    implement the '$' modifier feature, which only ever looks at its first                                           // 913
+            //    element.                                                                                                         // 914
+            //                                                                                                                     // 915
+            //    Second, it is used for sort key generation, which needs to be able to tell                                       // 916
+            //    the difference between different paths. Moreover, it needs to                                                    // 917
+            //    differentiate between explicit and implicit branching, which is why                                              // 918
+            //    there's the somewhat hacky 'x' entry: this means that explicit and                                               // 919
+            //    implicit array lookups will have different full arrayIndices paths. (That                                        // 920
+            //    code only requires that different paths have different arrayIndices; it                                          // 921
+            //    doesn't actually 'parse' arrayIndices. As an alternative, arrayIndices                                           // 922
+            //    could contain objects with flags like 'implicit', but I think that only                                          // 923
+            //    makes the code surrounding them more complex.)                                                                   // 924
+            //                                                                                                                     // 925
+            //    (By the way, this field ends up getting passed around a lot without                                              // 926
+            //    cloning, so never mutate any arrayIndices field/var in this package!)                                            // 927
             //                                                                                                                     // 928
-            // At the top level, you may only pass in a plain object or array.                                                     // 929
-            //                                                                                                                     // 930
-            // See the test 'minimongo - lookup' for some examples of what lookup functions                                        // 931
-            // return.                                                                                                             // 932
+            //                                                                                                                     // 929
+            // At the top level, you may only pass in a plain object or array.                                                     // 930
+            //                                                                                                                     // 931
+            // See the test 'minimongo - lookup' for some examples of what lookup functions                                        // 932
+            // return.                                                                                                             // 933
             //
             //
             function makeLookupFunction(key) {
-              // 933
-              var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {}; // 933
-              var parts = key.split('.'); // 934
-              var firstPart = parts.length ? parts[0] : ''; // 935
-              var lookupRest = parts.length > 1 && makeLookupFunction(parts.slice(1).join('.')); // 936
+              // 934
+              var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {}; // 934
+              var parts = key.split('.'); // 935
+              var firstPart = parts.length ? parts[0] : ''; // 936
+              var lookupRest = parts.length > 1 && makeLookupFunction(parts.slice(1).join('.')); // 937
               //
               var omitUnnecessaryFields = function (result) {
-                // 941
+                // 942
                 if (!result.dontIterate) {
-                  // 942
-                  delete result.dontIterate; // 943
-                } // 944
+                  // 943
+                  delete result.dontIterate; // 944
+                } // 945
                 //
                 if (result.arrayIndices && !result.arrayIndices.length) {
-                  // 946
-                  delete result.arrayIndices; // 947
-                } // 948
+                  // 947
+                  delete result.arrayIndices; // 948
+                } // 949
                 //
-                return result; // 950
-              }; // Doc will always be a plain object or an array.                                                                 // 951
-              // apply an explicit numeric index, an array.                                                                        // 954
+                return result; // 951
+              }; // Doc will always be a plain object or an array.                                                                 // 952
+              // apply an explicit numeric index, an array.                                                                        // 955
               //
               //
               return function (doc) {
-                // 955
-                var arrayIndices = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : []; // 955
+                // 956
+                var arrayIndices = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : []; // 956
                 //
                 if (Array.isArray(doc)) {
-                  // 956
-                  // If we're being asked to do an invalid lookup into an array (non-integer                                       // 957
-                  // or out-of-bounds), return no results (which is different from returning                                       // 958
-                  // a single undefined result, in that `null` equality checks won't match).                                       // 959
+                  // 957
+                  // If we're being asked to do an invalid lookup into an array (non-integer                                       // 958
+                  // or out-of-bounds), return no results (which is different from returning                                       // 959
+                  // a single undefined result, in that `null` equality checks won't match).                                       // 960
                   if (!(isNumericKey(firstPart) && firstPart < doc.length)) {
-                    // 960
-                    return []; // 961
-                  } // Remember that we used this array index. Include an 'x' to indicate that                                     // 962
-                  // the previous index came from being considered as an explicit array                                            // 965
-                  // index (not branching).                                                                                        // 966
+                    // 961
+                    return []; // 962
+                  } // Remember that we used this array index. Include an 'x' to indicate that                                     // 963
+                  // the previous index came from being considered as an explicit array                                            // 966
+                  // index (not branching).                                                                                        // 967
                   //
                   //
-                  arrayIndices = arrayIndices.concat(+firstPart, 'x'); // 967
-                } // Do our first lookup.                                                                                          // 968
+                  arrayIndices = arrayIndices.concat(+firstPart, 'x'); // 968
+                } // Do our first lookup.                                                                                          // 969
                 //
                 //
-                var firstLevel = doc[firstPart]; // If there is no deeper to dig, return what we found.                            // 971
-                //                                                                                                                 // 974
-                // If what we found is an array, most value selectors will choose to treat                                         // 975
-                // the elements of the array as matchable values in their own right, but                                           // 976
-                // that's done outside of the lookup function. (Exceptions to this are $size                                       // 977
-                // and stuff relating to $elemMatch.  eg, {a: {$size: 2}} does not match {a:                                       // 978
-                // [[1, 2]]}.)                                                                                                     // 979
-                //                                                                                                                 // 980
-                // That said, if we just did an *explicit* array lookup (on doc) to find                                           // 981
-                // firstLevel, and firstLevel is an array too, we do NOT want value                                                // 982
-                // selectors to iterate over it.  eg, {'a.0': 5} does not match {a: [[5]]}.                                        // 983
-                // So in that case, we mark the return value as 'don't iterate'.                                                   // 984
+                var firstLevel = doc[firstPart]; // If there is no deeper to dig, return what we found.                            // 972
+                //                                                                                                                 // 975
+                // If what we found is an array, most value selectors will choose to treat                                         // 976
+                // the elements of the array as matchable values in their own right, but                                           // 977
+                // that's done outside of the lookup function. (Exceptions to this are $size                                       // 978
+                // and stuff relating to $elemMatch.  eg, {a: {$size: 2}} does not match {a:                                       // 979
+                // [[1, 2]]}.)                                                                                                     // 980
+                //                                                                                                                 // 981
+                // That said, if we just did an *explicit* array lookup (on doc) to find                                           // 982
+                // firstLevel, and firstLevel is an array too, we do NOT want value                                                // 983
+                // selectors to iterate over it.  eg, {'a.0': 5} does not match {a: [[5]]}.                                        // 984
+                // So in that case, we mark the return value as 'don't iterate'.                                                   // 985
                 //
                 if (!lookupRest) {
-                  // 985
-                  return [omitUnnecessaryFields({ // 986
-                    arrayIndices: arrayIndices, // 987
-                    dontIterate: Array.isArray(doc) && Array.isArray(firstLevel), // 988
-                    value: firstLevel // 989
-                  })]; // 986
-                } // We need to dig deeper.  But if we can't, because what we've found is not                                      // 991
-                // an array or plain object, we're done. If we just did a numeric index into                                       // 994
-                // an array, we return nothing here (this is a change in Mongo 2.5 from                                            // 995
-                // Mongo 2.4, where {'a.0.b': null} stopped matching {a: [5]}). Otherwise,                                         // 996
-                // return a single `undefined` (which can, for example, match via equality                                         // 997
-                // with `null`).                                                                                                   // 998
+                  // 986
+                  return [omitUnnecessaryFields({ // 987
+                    arrayIndices: arrayIndices, // 988
+                    dontIterate: Array.isArray(doc) && Array.isArray(firstLevel), // 989
+                    value: firstLevel // 990
+                  })]; // 987
+                } // We need to dig deeper.  But if we can't, because what we've found is not                                      // 992
+                // an array or plain object, we're done. If we just did a numeric index into                                       // 995
+                // an array, we return nothing here (this is a change in Mongo 2.5 from                                            // 996
+                // Mongo 2.4, where {'a.0.b': null} stopped matching {a: [5]}). Otherwise,                                         // 997
+                // return a single `undefined` (which can, for example, match via equality                                         // 998
+                // with `null`).                                                                                                   // 999
                 //
                 //
                 if (!isIndexable(firstLevel)) {
-                  // 999
+                  // 1000
                   if (Array.isArray(doc)) {
-                    // 1000
-                    return []; // 1001
-                  } // 1002
+                    // 1001
+                    return []; // 1002
+                  } // 1003
                   //
-                  return [omitUnnecessaryFields({ // 1004
-                    arrayIndices: arrayIndices, // 1004
-                    value: undefined // 1004
-                  })]; // 1004
-                } // 1005
+                  return [omitUnnecessaryFields({ // 1005
+                    arrayIndices: arrayIndices, // 1005
+                    value: undefined // 1005
+                  })]; // 1005
+                } // 1006
                 //
-                var result = []; // 1007
+                var result = []; // 1008
                 //
                 var appendToResult = function (more) {
-                  // 1008
-                  result.push.apply(result, (0, _toConsumableArray3.default)(more)); // 1009
-                }; // Dig deeper: look up the rest of the parts on whatever we've found.                                           // 1010
-                // (lookupRest is smart enough to not try to do invalid lookups into                                               // 1013
-                // firstLevel if it's an array.)                                                                                   // 1014
+                  // 1009
+                  result.push.apply(result, (0, _toConsumableArray3.default)(more)); // 1010
+                }; // Dig deeper: look up the rest of the parts on whatever we've found.                                           // 1011
+                // (lookupRest is smart enough to not try to do invalid lookups into                                               // 1014
+                // firstLevel if it's an array.)                                                                                   // 1015
                 //
                 //
                 appendToResult(lookupRest(firstLevel, arrayIndices)); // If we found an array, then in *addition* to potentially treating the next
-                // part as a literal integer lookup, we should also 'branch': try to look up                                       // 1018
-                // the rest of the parts on each array element in parallel.                                                        // 1019
-                //                                                                                                                 // 1020
-                // In this case, we *only* dig deeper into array elements that are plain                                           // 1021
-                // objects. (Recall that we only got this far if we have further to dig.)                                          // 1022
-                // This makes sense: we certainly don't dig deeper into non-indexable                                              // 1023
-                // objects. And it would be weird to dig into an array: it's simpler to have                                       // 1024
-                // a rule that explicit integer indexes only apply to an outer array, not to                                       // 1025
-                // an array you find after a branching search.                                                                     // 1026
-                //                                                                                                                 // 1027
-                // In the special case of a numeric part in a *sort selector* (not a query                                         // 1028
-                // selector), we skip the branching: we ONLY allow the numeric part to mean                                        // 1029
-                // 'look up this index' in that case, not 'also look up this index in all                                          // 1030
-                // the elements of the array'.                                                                                     // 1031
+                // part as a literal integer lookup, we should also 'branch': try to look up                                       // 1019
+                // the rest of the parts on each array element in parallel.                                                        // 1020
+                //                                                                                                                 // 1021
+                // In this case, we *only* dig deeper into array elements that are plain                                           // 1022
+                // objects. (Recall that we only got this far if we have further to dig.)                                          // 1023
+                // This makes sense: we certainly don't dig deeper into non-indexable                                              // 1024
+                // objects. And it would be weird to dig into an array: it's simpler to have                                       // 1025
+                // a rule that explicit integer indexes only apply to an outer array, not to                                       // 1026
+                // an array you find after a branching search.                                                                     // 1027
+                //                                                                                                                 // 1028
+                // In the special case of a numeric part in a *sort selector* (not a query                                         // 1029
+                // selector), we skip the branching: we ONLY allow the numeric part to mean                                        // 1030
+                // 'look up this index' in that case, not 'also look up this index in all                                          // 1031
+                // the elements of the array'.                                                                                     // 1032
                 //
                 if (Array.isArray(firstLevel) && !(isNumericKey(parts[1]) && options.forSort)) {
-                  // 1032
+                  // 1033
                   firstLevel.forEach(function (branch, arrayIndex) {
-                    // 1034
+                    // 1035
                     if (LocalCollection._isPlainObject(branch)) {
-                      // 1035
-                      appendToResult(lookupRest(branch, arrayIndices.concat(arrayIndex))); // 1036
-                    } // 1037
-                  }); // 1038
-                } // 1039
+                      // 1036
+                      appendToResult(lookupRest(branch, arrayIndices.concat(arrayIndex))); // 1037
+                    } // 1038
+                  }); // 1039
+                } // 1040
                 //
-                return result; // 1041
-              }; // 1042
-            } // 1043
+                return result; // 1042
+              }; // 1043
+            } // 1044
             //
-            // Object exported only for unit testing.                                                                              // 1045
-            // Use it to export private functions to test in Tinytest.                                                             // 1046
-            MinimongoTest = { // 1047
-              makeLookupFunction: makeLookupFunction // 1047
-            }; // 1047
+            // Object exported only for unit testing.                                                                              // 1046
+            // Use it to export private functions to test in Tinytest.                                                             // 1047
+            MinimongoTest = { // 1048
+              makeLookupFunction: makeLookupFunction // 1048
+            }; // 1048
             //
             MinimongoError = function (message) {
-              // 1048
-              var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {}; // 1048
+              // 1049
+              var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {}; // 1049
               //
               if (typeof message === 'string' && options.field) {
-                // 1049
-                message += " for field '" + options.field + "'"; // 1050
-              } // 1051
+                // 1050
+                message += " for field '" + options.field + "'"; // 1051
+              } // 1052
               //
-              var error = new Error(message); // 1053
-              error.name = 'MinimongoError'; // 1054
-              return error; // 1055
-            }; // 1056
+              var error = new Error(message); // 1054
+              error.name = 'MinimongoError'; // 1055
+              return error; // 1056
+            }; // 1057
             //
             function nothingMatcher(docOrBranchedValues) {
-              // 1058
-              return { // 1059
-                result: false // 1059
-              }; // 1059
-            } // 1060
+              // 1059
+              return { // 1060
+                result: false // 1060
+              }; // 1060
+            } // 1061
             //
-            // Takes an operator object (an object with $ keys) and returns a branched                                             // 1062
-            // matcher for it.                                                                                                     // 1063
+            // Takes an operator object (an object with $ keys) and returns a branched                                             // 1063
+            // matcher for it.                                                                                                     // 1064
             function operatorBranchedMatcher(valueSelector, matcher, isRoot) {
-              // 1064
-              // Each valueSelector works separately on the various branches.  So one                                              // 1065
-              // operator can match one branch and another can match another branch.  This                                         // 1066
-              // is OK.                                                                                                            // 1067
+              // 1065
+              // Each valueSelector works separately on the various branches.  So one                                              // 1066
+              // operator can match one branch and another can match another branch.  This                                         // 1067
+              // is OK.                                                                                                            // 1068
               var operatorMatchers = Object.keys(valueSelector).map(function (operator) {
-                // 1068
-                var operand = valueSelector[operator]; // 1069
-                var simpleRange = ['$lt', '$lte', '$gt', '$gte'].includes(operator) && typeof operand === 'number'; // 1071
-                var simpleEquality = ['$ne', '$eq'].includes(operator) && operand !== Object(operand); // 1076
+                // 1069
+                var operand = valueSelector[operator]; // 1070
+                var simpleRange = ['$lt', '$lte', '$gt', '$gte'].includes(operator) && typeof operand === 'number'; // 1072
+                var simpleEquality = ['$ne', '$eq'].includes(operator) && operand !== Object(operand); // 1077
                 var simpleInclusion = ['$in', '$nin'].includes(operator) && Array.isArray(operand) && !operand.some(function (x) {
-                  return x === Object(x); // 1084
-                }); // 1084
+                  return x === Object(x); // 1085
+                }); // 1085
                 //
                 if (!(simpleRange || simpleInclusion || simpleEquality)) {
-                  // 1087
-                  matcher._isSimple = false; // 1088
-                } // 1089
+                  // 1088
+                  matcher._isSimple = false; // 1089
+                } // 1090
                 //
                 if (hasOwn.call(VALUE_OPERATORS, operator)) {
-                  // 1091
-                  return VALUE_OPERATORS[operator](operand, valueSelector, matcher, isRoot); // 1092
-                } // 1093
+                  // 1092
+                  return VALUE_OPERATORS[operator](operand, valueSelector, matcher, isRoot); // 1093
+                } // 1094
                 //
                 if (hasOwn.call(ELEMENT_OPERATORS, operator)) {
-                  // 1095
-                  var options = ELEMENT_OPERATORS[operator]; // 1096
+                  // 1096
+                  var options = ELEMENT_OPERATORS[operator]; // 1097
                   return convertElementMatcherToBranchedMatcher(options.compileElementSelector(operand, valueSelector, matcher), options);
-                } // 1101
+                } // 1102
                 //
-                throw new Error("Unrecognized operator: " + operator); // 1103
-              }); // 1104
-              return andBranchedMatchers(operatorMatchers); // 1106
-            } // paths - Array: list of mongo style paths                                                                          // 1107
-            // newLeafFn - Function: of form function(path) should return a scalar value to                                        // 1110
-            //                       put into list created for that path                                                           // 1111
-            // conflictFn - Function: of form function(node, path, fullPath) is called                                             // 1112
-            //                        when building a tree path for 'fullPath' node on                                             // 1113
-            //                        'path' was already a leaf with a value. Must return a                                        // 1114
-            //                        conflict resolution.                                                                         // 1115
-            // initial tree - Optional Object: starting tree.                                                                      // 1116
-            // @returns - Object: tree represented as a set of nested objects                                                      // 1117
+                throw new Error("Unrecognized operator: " + operator); // 1104
+              }); // 1105
+              return andBranchedMatchers(operatorMatchers); // 1107
+            } // paths - Array: list of mongo style paths                                                                          // 1108
+            // newLeafFn - Function: of form function(path) should return a scalar value to                                        // 1111
+            //                       put into list created for that path                                                           // 1112
+            // conflictFn - Function: of form function(node, path, fullPath) is called                                             // 1113
+            //                        when building a tree path for 'fullPath' node on                                             // 1114
+            //                        'path' was already a leaf with a value. Must return a                                        // 1115
+            //                        conflict resolution.                                                                         // 1116
+            // initial tree - Optional Object: starting tree.                                                                      // 1117
+            // @returns - Object: tree represented as a set of nested objects                                                      // 1118
             //
             //
             function pathsToTree(paths, newLeafFn, conflictFn) {
-              // 1118
-              var root = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {}; // 1118
+              // 1119
+              var root = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {}; // 1119
               paths.forEach(function (path) {
-                // 1119
-                var pathArray = path.split('.'); // 1120
-                var tree = root; // use .every just for iteration with break                                                       // 1121
+                // 1120
+                var pathArray = path.split('.'); // 1121
+                var tree = root; // use .every just for iteration with break                                                       // 1122
                 //
                 var success = pathArray.slice(0, -1).every(function (key, i) {
-                  // 1124
+                  // 1125
                   if (!hasOwn.call(tree, key)) {
-                    // 1125
-                    tree[key] = {}; // 1126
+                    // 1126
+                    tree[key] = {}; // 1127
                   } else if (tree[key] !== Object(tree[key])) {
-                    // 1127
+                    // 1128
                     tree[key] = conflictFn(tree[key], pathArray.slice(0, i + 1).join('.'), path); // break out of loop if we are failing for this path
                     //
                     if (tree[key] !== Object(tree[key])) {
-                      // 1135
-                      return false; // 1136
-                    } // 1137
-                  } // 1138
+                      // 1136
+                      return false; // 1137
+                    } // 1138
+                  } // 1139
                   //
-                  tree = tree[key]; // 1140
-                  return true; // 1142
-                }); // 1143
+                  tree = tree[key]; // 1141
+                  return true; // 1143
+                }); // 1144
                 //
                 if (success) {
-                  // 1145
-                  var lastKey = pathArray[pathArray.length - 1]; // 1146
+                  // 1146
+                  var lastKey = pathArray[pathArray.length - 1]; // 1147
                   //
                   if (hasOwn.call(tree, lastKey)) {
-                    // 1147
-                    tree[lastKey] = conflictFn(tree[lastKey], path, path); // 1148
+                    // 1148
+                    tree[lastKey] = conflictFn(tree[lastKey], path, path); // 1149
                   } else {
-                    // 1149
-                    tree[lastKey] = newLeafFn(path); // 1150
-                  } // 1151
-                } // 1152
-              }); // 1153
-              return root; // 1155
-            } // 1156
+                    // 1150
+                    tree[lastKey] = newLeafFn(path); // 1151
+                  } // 1152
+                } // 1153
+              }); // 1154
+              return root; // 1156
+            } // 1157
             //
-            // Makes sure we get 2 elements array and assume the first one to be x and                                             // 1158
-            // the second one to y no matter what user passes.                                                                     // 1159
-            // In case user passes { lon: x, lat: y } returns [x, y]                                                               // 1160
+            // Makes sure we get 2 elements array and assume the first one to be x and                                             // 1159
+            // the second one to y no matter what user passes.                                                                     // 1160
+            // In case user passes { lon: x, lat: y } returns [x, y]                                                               // 1161
             function pointToArray(point) {
-              // 1161
-              return Array.isArray(point) ? point.slice() : [point.x, point.y]; // 1162
-            } // Creating a document from an upsert is quite tricky.                                                               // 1163
-            // E.g. this selector: {"$or": [{"b.foo": {"$all": ["bar"]}}]}, should result                                          // 1166
-            // in: {"b.foo": "bar"}                                                                                                // 1167
-            // But this selector: {"$or": [{"b": {"foo": {"$all": ["bar"]}}}]} should throw                                        // 1168
-            // an error                                                                                                            // 1169
-            // Some rules (found mainly with trial & error, so there might be more):                                               // 1171
-            // - handle all childs of $and (or implicit $and)                                                                      // 1172
-            // - handle $or nodes with exactly 1 child                                                                             // 1173
-            // - ignore $or nodes with more than 1 child                                                                           // 1174
-            // - ignore $nor and $not nodes                                                                                        // 1175
-            // - throw when a value can not be set unambiguously                                                                   // 1176
-            // - every value for $all should be dealt with as separate $eq-s                                                       // 1177
-            // - threat all children of $all as $eq setters (=> set if $all.length === 1,                                          // 1178
-            //   otherwise throw error)                                                                                            // 1179
-            // - you can not mix '$'-prefixed keys and non-'$'-prefixed keys                                                       // 1180
-            // - you can only have dotted keys on a root-level                                                                     // 1181
-            // - you can not have '$'-prefixed keys more than one-level deep in an object                                          // 1182
-            // Handles one key/value pair to put in the selector document                                                          // 1184
+              // 1162
+              return Array.isArray(point) ? point.slice() : [point.x, point.y]; // 1163
+            } // Creating a document from an upsert is quite tricky.                                                               // 1164
+            // E.g. this selector: {"$or": [{"b.foo": {"$all": ["bar"]}}]}, should result                                          // 1167
+            // in: {"b.foo": "bar"}                                                                                                // 1168
+            // But this selector: {"$or": [{"b": {"foo": {"$all": ["bar"]}}}]} should throw                                        // 1169
+            // an error                                                                                                            // 1170
+            // Some rules (found mainly with trial & error, so there might be more):                                               // 1172
+            // - handle all childs of $and (or implicit $and)                                                                      // 1173
+            // - handle $or nodes with exactly 1 child                                                                             // 1174
+            // - ignore $or nodes with more than 1 child                                                                           // 1175
+            // - ignore $nor and $not nodes                                                                                        // 1176
+            // - throw when a value can not be set unambiguously                                                                   // 1177
+            // - every value for $all should be dealt with as separate $eq-s                                                       // 1178
+            // - threat all children of $all as $eq setters (=> set if $all.length === 1,                                          // 1179
+            //   otherwise throw error)                                                                                            // 1180
+            // - you can not mix '$'-prefixed keys and non-'$'-prefixed keys                                                       // 1181
+            // - you can only have dotted keys on a root-level                                                                     // 1182
+            // - you can not have '$'-prefixed keys more than one-level deep in an object                                          // 1183
+            // Handles one key/value pair to put in the selector document                                                          // 1185
             //
             //
             function populateDocumentWithKeyValue(document, key, value) {
-              // 1185
+              // 1186
               if (value && Object.getPrototypeOf(value) === Object.prototype) {
-                // 1186
-                populateDocumentWithObject(document, key, value); // 1187
+                // 1187
+                populateDocumentWithObject(document, key, value); // 1188
               } else if (!(value instanceof RegExp)) {
-                // 1188
-                insertIntoDocument(document, key, value); // 1189
-              } // 1190
-            } // Handles a key, value pair to put in the selector document                                                         // 1191
-            // if the value is an object                                                                                           // 1194
+                // 1189
+                insertIntoDocument(document, key, value); // 1190
+              } // 1191
+            } // Handles a key, value pair to put in the selector document                                                         // 1192
+            // if the value is an object                                                                                           // 1195
             //
             //
             function populateDocumentWithObject(document, key, value) {
-              // 1195
-              var keys = Object.keys(value); // 1196
+              // 1196
+              var keys = Object.keys(value); // 1197
               var unprefixedKeys = keys.filter(function (op) {
-                // 1197
-                return op[0] !== '$'; // 1197
-              }); // 1197
+                // 1198
+                return op[0] !== '$'; // 1198
+              }); // 1198
               //
               if (unprefixedKeys.length > 0 || !keys.length) {
-                // 1199
-                // Literal (possibly empty) object ( or empty object )                                                             // 1200
-                // Don't allow mixing '$'-prefixed with non-'$'-prefixed fields                                                    // 1201
+                // 1200
+                // Literal (possibly empty) object ( or empty object )                                                             // 1201
+                // Don't allow mixing '$'-prefixed with non-'$'-prefixed fields                                                    // 1202
                 if (keys.length !== unprefixedKeys.length) {
-                  // 1202
-                  throw new Error("unknown operator: " + unprefixedKeys[0]); // 1203
-                } // 1204
+                  // 1203
+                  throw new Error("unknown operator: " + unprefixedKeys[0]); // 1204
+                } // 1205
                 //
-                validateObject(value, key); // 1206
-                insertIntoDocument(document, key, value); // 1207
+                validateObject(value, key); // 1207
+                insertIntoDocument(document, key, value); // 1208
               } else {
-                // 1208
+                // 1209
                 Object.keys(value).forEach(function (op) {
-                  // 1209
-                  var object = value[op]; // 1210
+                  // 1210
+                  var object = value[op]; // 1211
                   //
                   if (op === '$eq') {
-                    // 1212
-                    populateDocumentWithKeyValue(document, key, object); // 1213
+                    // 1213
+                    populateDocumentWithKeyValue(document, key, object); // 1214
                   } else if (op === '$all') {
-                    // 1214
-                    // every value for $all should be dealt with as separate $eq-s                                                 // 1215
+                    // 1215
+                    // every value for $all should be dealt with as separate $eq-s                                                 // 1216
                     object.forEach(function (element) {
-                      // 1216
-                      return populateDocumentWithKeyValue(document, key, element); // 1216
-                    }); // 1216
-                  } // 1219
-                }); // 1220
-              } // 1221
-            } // Fills a document with certain fields from an upsert selector                                                      // 1222
+                      // 1217
+                      return populateDocumentWithKeyValue(document, key, element); // 1217
+                    }); // 1217
+                  } // 1220
+                }); // 1221
+              } // 1222
+            } // Fills a document with certain fields from an upsert selector                                                      // 1223
             //
             //
             function populateDocumentWithQueryFields(query) {
-              // 1225
-              var document = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {}; // 1225
+              // 1226
+              var document = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {}; // 1226
               //
               if (Object.getPrototypeOf(query) === Object.prototype) {
-                // 1226
-                // handle implicit $and                                                                                            // 1227
+                // 1227
+                // handle implicit $and                                                                                            // 1228
                 Object.keys(query).forEach(function (key) {
-                  // 1228
-                  var value = query[key]; // 1229
+                  // 1229
+                  var value = query[key]; // 1230
                   //
                   if (key === '$and') {
-                    // 1231
-                    // handle explicit $and                                                                                        // 1232
+                    // 1232
+                    // handle explicit $and                                                                                        // 1233
                     value.forEach(function (element) {
-                      // 1233
-                      return populateDocumentWithQueryFields(element, document); // 1233
-                    }); // 1233
+                      // 1234
+                      return populateDocumentWithQueryFields(element, document); // 1234
+                    }); // 1234
                   } else if (key === '$or') {
-                    // 1236
-                    // handle $or nodes with exactly 1 child                                                                       // 1237
+                    // 1237
+                    // handle $or nodes with exactly 1 child                                                                       // 1238
                     if (value.length === 1) {
-                      // 1238
-                      populateDocumentWithQueryFields(value[0], document); // 1239
-                    } // 1240
+                      // 1239
+                      populateDocumentWithQueryFields(value[0], document); // 1240
+                    } // 1241
                   } else if (key[0] !== '$') {
-                    // 1241
-                    // Ignore other '$'-prefixed logical selectors                                                                 // 1242
-                    populateDocumentWithKeyValue(document, key, value); // 1243
-                  } // 1244
-                }); // 1245
+                    // 1242
+                    // Ignore other '$'-prefixed logical selectors                                                                 // 1243
+                    populateDocumentWithKeyValue(document, key, value); // 1244
+                  } // 1245
+                }); // 1246
               } else {
-                // 1246
-                // Handle meteor-specific shortcut for selecting _id                                                               // 1247
+                // 1247
+                // Handle meteor-specific shortcut for selecting _id                                                               // 1248
                 if (LocalCollection._selectorIsId(query)) {
-                  // 1248
-                  insertIntoDocument(document, '_id', query); // 1249
-                } // 1250
-              } // 1251
+                  // 1249
+                  insertIntoDocument(document, '_id', query); // 1250
+                } // 1251
+              } // 1252
               //
-              return document; // 1253
-            } // 1254
+              return document; // 1254
+            } // 1255
             //
             function projectionDetails(fields) {
-              // 1262
-              // Find the non-_id keys (_id is handled specially because it is included                                            // 1263
-              // unless explicitly excluded). Sort the keys, so that our code to detect                                            // 1264
-              // overlaps like 'foo' and 'foo.bar' can assume that 'foo' comes first.                                              // 1265
+              // 1263
+              // Find the non-_id keys (_id is handled specially because it is included                                            // 1264
+              // unless explicitly excluded). Sort the keys, so that our code to detect                                            // 1265
+              // overlaps like 'foo' and 'foo.bar' can assume that 'foo' comes first.                                              // 1266
               var fieldsKeys = Object.keys(fields).sort(); // If _id is the only field in the projection, do not remove it, since it is
-              // required to determine if this is an exclusion or exclusion. Also keep an                                          // 1269
-              // inclusive _id, since inclusive _id follows the normal rules about mixing                                          // 1270
-              // inclusive and exclusive fields. If _id is not the only field in the                                               // 1271
-              // projection and is exclusive, remove it so it can be handled later by a                                            // 1272
-              // special case, since exclusive _id is always allowed.                                                              // 1273
+              // required to determine if this is an exclusion or exclusion. Also keep an                                          // 1270
+              // inclusive _id, since inclusive _id follows the normal rules about mixing                                          // 1271
+              // inclusive and exclusive fields. If _id is not the only field in the                                               // 1272
+              // projection and is exclusive, remove it so it can be handled later by a                                            // 1273
+              // special case, since exclusive _id is always allowed.                                                              // 1274
               //
               if (!(fieldsKeys.length === 1 && fieldsKeys[0] === '_id') && !(fieldsKeys.includes('_id') && fields._id)) {
-                // 1274
+                // 1275
                 fieldsKeys = fieldsKeys.filter(function (key) {
-                  // 1276
-                  return key !== '_id'; // 1276
-                }); // 1276
-              } // 1277
+                  // 1277
+                  return key !== '_id'; // 1277
+                }); // 1277
+              } // 1278
               //
-              var including = null; // Unknown                                                                                     // 1279
+              var including = null; // Unknown                                                                                     // 1280
               //
               fieldsKeys.forEach(function (keyPath) {
-                // 1281
-                var rule = !!fields[keyPath]; // 1282
+                // 1282
+                var rule = !!fields[keyPath]; // 1283
                 //
                 if (including === null) {
-                  // 1284
-                  including = rule; // 1285
-                } // This error message is copied from MongoDB shell                                                               // 1286
+                  // 1285
+                  including = rule; // 1286
+                } // This error message is copied from MongoDB shell                                                               // 1287
                 //
                 //
                 if (including !== rule) {
-                  // 1289
-                  throw MinimongoError('You cannot currently mix including and excluding fields.'); // 1290
-                } // 1293
-              }); // 1294
+                  // 1290
+                  throw MinimongoError('You cannot currently mix including and excluding fields.'); // 1291
+                } // 1294
+              }); // 1295
               var projectionRulesTree = pathsToTree(fieldsKeys, function (path) {
-                // 1296
-                return including; // 1298
+                // 1297
+                return including; // 1299
               }, function (node, path, fullPath) {
-                // 1298
-                // Check passed projection fields' keys: If you have two rules such as                                             // 1300
-                // 'foo.bar' and 'foo.bar.baz', then the result becomes ambiguous. If                                              // 1301
-                // that happens, there is a probability you are doing something wrong,                                             // 1302
-                // framework should notify you about such mistake earlier on cursor                                                // 1303
-                // compilation step than later during runtime.  Note, that real mongo                                              // 1304
-                // doesn't do anything about it and the later rule appears in projection                                           // 1305
-                // project, more priority it takes.                                                                                // 1306
-                //                                                                                                                 // 1307
-                // Example, assume following in mongo shell:                                                                       // 1308
-                // > db.coll.insert({ a: { b: 23, c: 44 } })                                                                       // 1309
-                // > db.coll.find({}, { 'a': 1, 'a.b': 1 })                                                                        // 1310
-                // {"_id": ObjectId("520bfe456024608e8ef24af3"), "a": {"b": 23}}                                                   // 1311
-                // > db.coll.find({}, { 'a.b': 1, 'a': 1 })                                                                        // 1312
-                // {"_id": ObjectId("520bfe456024608e8ef24af3"), "a": {"b": 23, "c": 44}}                                          // 1313
-                //                                                                                                                 // 1314
-                // Note, how second time the return set of keys is different.                                                      // 1315
-                var currentPath = fullPath; // 1316
-                var anotherPath = path; // 1317
+                // 1299
+                // Check passed projection fields' keys: If you have two rules such as                                             // 1301
+                // 'foo.bar' and 'foo.bar.baz', then the result becomes ambiguous. If                                              // 1302
+                // that happens, there is a probability you are doing something wrong,                                             // 1303
+                // framework should notify you about such mistake earlier on cursor                                                // 1304
+                // compilation step than later during runtime.  Note, that real mongo                                              // 1305
+                // doesn't do anything about it and the later rule appears in projection                                           // 1306
+                // project, more priority it takes.                                                                                // 1307
+                //                                                                                                                 // 1308
+                // Example, assume following in mongo shell:                                                                       // 1309
+                // > db.coll.insert({ a: { b: 23, c: 44 } })                                                                       // 1310
+                // > db.coll.find({}, { 'a': 1, 'a.b': 1 })                                                                        // 1311
+                // {"_id": ObjectId("520bfe456024608e8ef24af3"), "a": {"b": 23}}                                                   // 1312
+                // > db.coll.find({}, { 'a.b': 1, 'a': 1 })                                                                        // 1313
+                // {"_id": ObjectId("520bfe456024608e8ef24af3"), "a": {"b": 23, "c": 44}}                                          // 1314
+                //                                                                                                                 // 1315
+                // Note, how second time the return set of keys is different.                                                      // 1316
+                var currentPath = fullPath; // 1317
+                var anotherPath = path; // 1318
                 throw MinimongoError("both " + currentPath + " and " + anotherPath + " found in fields option, " + 'using both of them may trigger unexpected behavior. Did you mean to ' + 'use only one of them?');
-              }); // 1323
-              return { // 1325
-                including: including, // 1325
-                tree: projectionRulesTree // 1325
-              }; // 1325
-            } // 1326
+              }); // 1324
+              return { // 1326
+                including: including, // 1326
+                tree: projectionRulesTree // 1326
+              }; // 1326
+            } // 1327
             //
             function regexpElementMatcher(regexp) {
-              // 1329
+              // 1330
               return function (value) {
-                // 1330
+                // 1331
                 if (value instanceof RegExp) {
-                  // 1331
-                  return value.toString() === regexp.toString(); // 1332
-                } // Regexps only work against strings.                                                                            // 1333
+                  // 1332
+                  return value.toString() === regexp.toString(); // 1333
+                } // Regexps only work against strings.                                                                            // 1334
                 //
                 //
                 if (typeof value !== 'string') {
-                  // 1336
-                  return false; // 1337
-                } // Reset regexp's state to avoid inconsistent matching for objects with the                                      // 1338
-                // same value on consecutive calls of regexp.test. This happens only if the                                        // 1341
-                // regexp has the 'g' flag. Also note that ES6 introduces a new flag 'y' for                                       // 1342
-                // which we should *not* change the lastIndex but MongoDB doesn't support                                          // 1343
-                // either of these flags.                                                                                          // 1344
+                  // 1337
+                  return false; // 1338
+                } // Reset regexp's state to avoid inconsistent matching for objects with the                                      // 1339
+                // same value on consecutive calls of regexp.test. This happens only if the                                        // 1342
+                // regexp has the 'g' flag. Also note that ES6 introduces a new flag 'y' for                                       // 1343
+                // which we should *not* change the lastIndex but MongoDB doesn't support                                          // 1344
+                // either of these flags.                                                                                          // 1345
                 //
                 //
-                regexp.lastIndex = 0; // 1345
-                return regexp.test(value); // 1347
-              }; // 1348
-            } // 1349
+                regexp.lastIndex = 0; // 1346
+                return regexp.test(value); // 1348
+              }; // 1349
+            } // 1350
             //
-            // Validates the key in a path.                                                                                        // 1351
-            // Objects that are nested more then 1 level cannot have dotted fields                                                 // 1352
-            // or fields starting with '$'                                                                                         // 1353
+            // Validates the key in a path.                                                                                        // 1352
+            // Objects that are nested more then 1 level cannot have dotted fields                                                 // 1353
+            // or fields starting with '$'                                                                                         // 1354
             function validateKeyInPath(key, path) {
-              // 1354
+              // 1355
               if (key.includes('.')) {
-                // 1355
-                throw new Error("The dotted field '" + key + "' in '" + path + "." + key + " is not valid for storage."); // 1356
-              } // 1359
+                // 1356
+                throw new Error("The dotted field '" + key + "' in '" + path + "." + key + " is not valid for storage."); // 1357
+              } // 1360
               //
               if (key[0] === '$') {
-                // 1361
-                throw new Error("The dollar ($) prefixed field  '" + path + "." + key + " is not valid for storage."); // 1362
-              } // 1365
-            } // Recursively validates an object that is nested more than one level deep                                           // 1366
+                // 1362
+                throw new Error("The dollar ($) prefixed field  '" + path + "." + key + " is not valid for storage."); // 1363
+              } // 1366
+            } // Recursively validates an object that is nested more than one level deep                                           // 1367
             //
             //
             function validateObject(object, path) {
-              // 1369
+              // 1370
               if (object && Object.getPrototypeOf(object) === Object.prototype) {
-                // 1370
+                // 1371
                 Object.keys(object).forEach(function (key) {
-                  // 1371
-                  validateKeyInPath(key, path); // 1372
-                  validateObject(object[key], path + '.' + key); // 1373
-                }); // 1374
-              } // 1375
-            } // 1376
+                  // 1372
+                  validateKeyInPath(key, path); // 1373
+                  validateObject(object[key], path + '.' + key); // 1374
+                }); // 1375
+              } // 1376
+            } // 1377
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
           }, "cursor.js": function (_require4, _exports4, _module3) {
 
@@ -29813,45 +30065,52 @@ __meteor_runtime_config__ = {
                 LocalCollection = v; // 1
               } // 1
             }, 0); // 1
+            var hasOwn = void 0; // 1
+            _module3.watch(_require4("./common.js"), { // 1
+              hasOwn: function (v) {
+                // 1
+                hasOwn = v; // 1
+              } // 1
+            }, 1); // 1
             //
             var Cursor = function () {
               //
-              // don't call this ctor directly.  use LocalCollection.find().                                                       // 6
+              // don't call this ctor directly.  use LocalCollection.find().                                                       // 7
               function Cursor(collection, selector) {
-                // 7
-                var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {}; // 7
-                (0, _classCallCheck3.default)(this, Cursor); // 7
-                this.collection = collection; // 8
-                this.sorter = null; // 9
-                this.matcher = new Minimongo.Matcher(selector); // 10
+                // 8
+                var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {}; // 8
+                (0, _classCallCheck3.default)(this, Cursor); // 8
+                this.collection = collection; // 9
+                this.sorter = null; // 10
+                this.matcher = new Minimongo.Matcher(selector); // 11
                 //
                 if (LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
-                  // 12
-                  // stash for fast _id and { _id }                                                                                // 13
-                  this._selectorId = selector._id || selector; // 14
+                  // 13
+                  // stash for fast _id and { _id }                                                                                // 14
+                  this._selectorId = hasOwn.call(selector, '_id') ? selector._id : selector; // 15
                 } else {
-                  // 15
-                  this._selectorId = undefined; // 16
+                  // 18
+                  this._selectorId = undefined; // 19
                   //
                   if (this.matcher.hasGeoQuery() || options.sort) {
-                    // 18
-                    this.sorter = new Minimongo.Sorter(options.sort || [], { // 19
-                      matcher: this.matcher // 21
-                    }); // 21
-                  } // 23
-                } // 24
+                    // 21
+                    this.sorter = new Minimongo.Sorter(options.sort || [], { // 22
+                      matcher: this.matcher // 24
+                    }); // 24
+                  } // 26
+                } // 27
                 //
-                this.skip = options.skip || 0; // 26
-                this.limit = options.limit; // 27
-                this.fields = options.fields; // 28
-                this._projectionFn = LocalCollection._compileProjection(this.fields || {}); // 30
+                this.skip = options.skip || 0; // 29
+                this.limit = options.limit; // 30
+                this.fields = options.fields; // 31
+                this._projectionFn = LocalCollection._compileProjection(this.fields || {}); // 33
                 this._transform = LocalCollection.wrapTransform(options.transform); // by default, queries register w/ Tracker when it is available.
                 //
                 if (typeof Tracker !== 'undefined') {
-                  // 35
-                  this.reactive = options.reactive === undefined ? true : options.reactive; // 36
-                } // 37
-              } /**                                                                                                                // 38
+                  // 38
+                  this.reactive = options.reactive === undefined ? true : options.reactive; // 39
+                } // 40
+              } /**                                                                                                                // 41
                  * @summary Returns the number of documents that match a query.                                                    //
                  * @memberOf Mongo.Cursor                                                                                          //
                  * @method  count                                                                                                  //
@@ -29865,18 +30124,18 @@ __meteor_runtime_config__ = {
                 function count() {
                   //
                   if (this.reactive) {
-                    // 49
-                    // allow the observe to be unordered                                                                           // 50
-                    this._depend({ // 51
-                      added: true, // 51
-                      removed: true // 51
-                    }, true); // 51
-                  } // 52
+                    // 52
+                    // allow the observe to be unordered                                                                           // 53
+                    this._depend({ // 54
+                      added: true, // 54
+                      removed: true // 54
+                    }, true); // 54
+                  } // 55
                   //
-                  return this._getRawObjects({ // 54
-                    ordered: true // 54
-                  }).length; // 54
-                } // 55
+                  return this._getRawObjects({ // 57
+                    ordered: true // 57
+                  }).length; // 57
+                } // 58
                 //
                 return count; //
               }(); /**                                                                                                             //
@@ -29892,65 +30151,106 @@ __meteor_runtime_config__ = {
                 //
                 function fetch() {
                   //
-                  var result = []; // 66
+                  var result = []; // 69
                   this.forEach(function (doc) {
-                    // 68
-                    result.push(doc); // 69
-                  }); // 70
-                  return result; // 72
-                } // 73
+                    // 71
+                    result.push(doc); // 72
+                  }); // 73
+                  return result; // 75
+                } // 76
                 //
                 return fetch; //
-              }(); /**                                                                                                             //
-                    * @callback IterationCallback                                                                                  //
-                    * @param {Object} doc                                                                                          //
-                    * @param {Number} index                                                                                        //
-                    */ /**                                                                                                         //
-                        * @summary Call `callback` once for each matching document, sequentially and                               //
-                        *          synchronously.                                                                                  //
-                        * @locus Anywhere                                                                                          //
-                        * @method  forEach                                                                                         //
-                        * @instance                                                                                                //
-                        * @memberOf Mongo.Cursor                                                                                   //
-                        * @param {IterationCallback} callback Function to call. It will be called                                  //
-                        *                                     with three arguments: the document, a                                //
-                        *                                     0-based index, and <em>cursor</em>                                   //
-                        *                                     itself.                                                              //
-                        * @param {Any} [thisArg] An object which will be the value of `this` inside                                //
-                        *                        `callback`.                                                                       //
-                        */ //
+              }(); //
+              //
+              Cursor.prototype[Symbol.iterator] = function () {
+                //
+                var _this = this; // 78
+                //
+                if (this.reactive) {
+                  // 79
+                  this._depend({ // 80
+                    addedBefore: true, // 81
+                    removed: true, // 82
+                    changed: true, // 83
+                    movedBefore: true // 84
+                  }); // 80
+                } // 85
+                //
+                var index = 0; // 87
+                //
+                var objects = this._getRawObjects({ // 88
+                  ordered: true // 88
+                }); // 88
+                //
+                return { // 90
+                  next: function () {
+                    // 91
+                    if (index < objects.length) {
+                      // 92
+                      // This doubles as a clone operation.                                                                        // 93
+                      var element = _this._projectionFn(objects[index++]); // 94
+                      //
+                      if (_this._transform) element = _this._transform(element); // 96
+                      return { // 99
+                        value: element // 99
+                      }; // 99
+                    } // 100
+                    //
+                    return { // 102
+                      done: true // 102
+                    }; // 102
+                  } // 103
+                }; // 90
+              }; /**                                                                                                               // 105
+                  * @callback IterationCallback                                                                                    //
+                  * @param {Object} doc                                                                                            //
+                  * @param {Number} index                                                                                          //
+                  */ /**                                                                                                           //
+                      * @summary Call `callback` once for each matching document, sequentially and                                 //
+                      *          synchronously.                                                                                    //
+                      * @locus Anywhere                                                                                            //
+                      * @method  forEach                                                                                           //
+                      * @instance                                                                                                  //
+                      * @memberOf Mongo.Cursor                                                                                     //
+                      * @param {IterationCallback} callback Function to call. It will be called                                    //
+                      *                                     with three arguments: the document, a                                  //
+                      *                                     0-based index, and <em>cursor</em>                                     //
+                      *                                     itself.                                                                //
+                      * @param {Any} [thisArg] An object which will be the value of `this` inside                                  //
+                      *                        `callback`.                                                                         //
+                      */ //
               //
               Cursor.prototype.forEach = function () {
                 //
                 function forEach(callback, thisArg) {
                   //
-                  var _this = this; // 94
+                  var _this2 = this; // 126
                   //
                   if (this.reactive) {
-                    // 95
-                    this._depend({ // 96
-                      addedBefore: true, // 97
-                      removed: true, // 98
-                      changed: true, // 99
-                      movedBefore: true // 100
-                    }); // 96
-                  } // 101
+                    // 127
+                    this._depend({ // 128
+                      addedBefore: true, // 129
+                      removed: true, // 130
+                      changed: true, // 131
+                      movedBefore: true // 132
+                    }); // 128
+                  } // 133
                   //
-                  this._getRawObjects({ // 103
-                    ordered: true // 103
+                  this._getRawObjects({ // 135
+                    ordered: true // 135
                   }).forEach(function (element, i) {
-                    // 103
-                    // This doubles as a clone operation.                                                                          // 104
-                    element = _this._projectionFn(element); // 105
+                    // 135
+                    // This doubles as a clone operation.                                                                          // 136
+                    element = _this2._projectionFn(element); // 137
                     //
-                    if (_this._transform) {
-                      // 107
-                      element = _this._transform(element); // 108
-                    } // 109
+                    if (_this2._transform) {
+                      // 139
+                      element = _this2._transform(element); // 140
+                    } // 141
                     //
-                    callback.call(thisArg, element, i, _this); // 111
-                  }); // 112
-                } // 113
+                    callback.call(thisArg, element, i, _this2); // 143
+                  }); // 144
+                } // 145
                 //
                 return forEach; //
               }(); //
@@ -29959,8 +30259,8 @@ __meteor_runtime_config__ = {
                 //
                 function getTransform() {
                   //
-                  return this._transform; // 116
-                } // 117
+                  return this._transform; // 148
+                } // 149
                 //
                 return getTransform; //
               }(); /**                                                                                                             //
@@ -29981,38 +30281,38 @@ __meteor_runtime_config__ = {
                 //
                 function map(callback, thisArg) {
                   //
-                  var _this2 = this; // 132
+                  var _this3 = this; // 164
                   //
-                  var result = []; // 133
+                  var result = []; // 165
                   this.forEach(function (doc, i) {
-                    // 135
-                    result.push(callback.call(thisArg, doc, i, _this2)); // 136
-                  }); // 137
-                  return result; // 139
-                } // 140
+                    // 167
+                    result.push(callback.call(thisArg, doc, i, _this3)); // 168
+                  }); // 169
+                  return result; // 171
+                } // 172
                 //
                 return map; //
               }(); // options to contain:                                                                                          //
-              //  * callbacks for observe():                                                                                       // 143
-              //    - addedAt (document, atIndex)                                                                                  // 144
-              //    - added (document)                                                                                             // 145
-              //    - changedAt (newDocument, oldDocument, atIndex)                                                                // 146
-              //    - changed (newDocument, oldDocument)                                                                           // 147
-              //    - removedAt (document, atIndex)                                                                                // 148
-              //    - removed (document)                                                                                           // 149
-              //    - movedTo (document, oldIndex, newIndex)                                                                       // 150
-              //                                                                                                                   // 151
-              // attributes available on returned query handle:                                                                    // 152
-              //  * stop(): end updates                                                                                            // 153
-              //  * collection: the collection this query is querying                                                              // 154
-              //                                                                                                                   // 155
-              // iff x is a returned query handle, (x instanceof                                                                   // 156
-              // LocalCollection.ObserveHandle) is true                                                                            // 157
-              //                                                                                                                   // 158
-              // initial results delivered through added callback                                                                  // 159
-              // XXX maybe callbacks should take a list of objects, to expose transactions?                                        // 160
-              // XXX maybe support field limiting (to limit what you're notified on)                                               // 161
-              /**                                                                                                                  // 163
+              //  * callbacks for observe():                                                                                       // 175
+              //    - addedAt (document, atIndex)                                                                                  // 176
+              //    - added (document)                                                                                             // 177
+              //    - changedAt (newDocument, oldDocument, atIndex)                                                                // 178
+              //    - changed (newDocument, oldDocument)                                                                           // 179
+              //    - removedAt (document, atIndex)                                                                                // 180
+              //    - removed (document)                                                                                           // 181
+              //    - movedTo (document, oldIndex, newIndex)                                                                       // 182
+              //                                                                                                                   // 183
+              // attributes available on returned query handle:                                                                    // 184
+              //  * stop(): end updates                                                                                            // 185
+              //  * collection: the collection this query is querying                                                              // 186
+              //                                                                                                                   // 187
+              // iff x is a returned query handle, (x instanceof                                                                   // 188
+              // LocalCollection.ObserveHandle) is true                                                                            // 189
+              //                                                                                                                   // 190
+              // initial results delivered through added callback                                                                  // 191
+              // XXX maybe callbacks should take a list of objects, to expose transactions?                                        // 192
+              // XXX maybe support field limiting (to limit what you're notified on)                                               // 193
+              /**                                                                                                                  // 195
                * @summary Watch a query.  Receive callbacks as the result set changes.                                             //
                * @locus Anywhere                                                                                                   //
                * @memberOf Mongo.Cursor                                                                                            //
@@ -30025,8 +30325,8 @@ __meteor_runtime_config__ = {
                 //
                 function observe(options) {
                   //
-                  return LocalCollection._observeFromObserveChanges(this, options); // 172
-                } // 173
+                  return LocalCollection._observeFromObserveChanges(this, options); // 204
+                } // 205
                 //
                 return observe; //
               }(); /**                                                                                                             //
@@ -30044,151 +30344,151 @@ __meteor_runtime_config__ = {
                 //
                 function observeChanges(options) {
                   //
-                  var _this3 = this; // 185
+                  var _this4 = this; // 217
                   //
                   var ordered = LocalCollection._observeChangesCallbacksAreOrdered(options); // there are several places that assume you aren't combining skip/limit with
-                  // unordered observe.  eg, update's EJSON.clone, and the "there are several"                                     // 189
-                  // comment in _modifyAndNotify                                                                                   // 190
-                  // XXX allow skip/limit with unordered observe                                                                   // 191
+                  // unordered observe.  eg, update's EJSON.clone, and the "there are several"                                     // 221
+                  // comment in _modifyAndNotify                                                                                   // 222
+                  // XXX allow skip/limit with unordered observe                                                                   // 223
                   //
                   //
                   if (!options._allow_unordered && !ordered && (this.skip || this.limit)) {
-                    // 192
+                    // 224
                     throw new Error('must use ordered observe (ie, \'addedBefore\' instead of \'added\') ' + 'with skip or limit');
-                  } // 197
+                  } // 229
                   //
                   if (this.fields && (this.fields._id === 0 || this.fields._id === false)) {
-                    // 199
-                    throw Error('You may not observe a cursor with {fields: {_id: 0}}'); // 200
-                  } // 201
+                    // 231
+                    throw Error('You may not observe a cursor with {fields: {_id: 0}}'); // 232
+                  } // 233
                   //
-                  var distances = this.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap(); // 203
-                  var query = { // 209
-                    cursor: this, // 210
-                    dirty: false, // 211
-                    distances: distances, // 212
-                    matcher: this.matcher, // 213
-                    // not fast pathed                                                                                             // 213
-                    ordered: ordered, // 214
-                    projectionFn: this._projectionFn, // 215
-                    resultsSnapshot: null, // 216
-                    sorter: ordered && this.sorter // 217
-                  }; // 209
-                  var qid = void 0; // Non-reactive queries call added[Before] and then never call anything                        // 220
-                  // else.                                                                                                         // 223
+                  var distances = this.matcher.hasGeoQuery() && ordered && new LocalCollection._IdMap(); // 235
+                  var query = { // 241
+                    cursor: this, // 242
+                    dirty: false, // 243
+                    distances: distances, // 244
+                    matcher: this.matcher, // 245
+                    // not fast pathed                                                                                             // 245
+                    ordered: ordered, // 246
+                    projectionFn: this._projectionFn, // 247
+                    resultsSnapshot: null, // 248
+                    sorter: ordered && this.sorter // 249
+                  }; // 241
+                  var qid = void 0; // Non-reactive queries call added[Before] and then never call anything                        // 252
+                  // else.                                                                                                         // 255
                   //
                   if (this.reactive) {
-                    // 224
-                    qid = this.collection.next_qid++; // 225
-                    this.collection.queries[qid] = query; // 226
-                  } // 227
+                    // 256
+                    qid = this.collection.next_qid++; // 257
+                    this.collection.queries[qid] = query; // 258
+                  } // 259
                   //
-                  query.results = this._getRawObjects({ // 229
-                    ordered: ordered, // 229
-                    distances: query.distances // 229
-                  }); // 229
+                  query.results = this._getRawObjects({ // 261
+                    ordered: ordered, // 261
+                    distances: query.distances // 261
+                  }); // 261
                   //
                   if (this.collection.paused) {
-                    // 231
-                    query.resultsSnapshot = ordered ? [] : new LocalCollection._IdMap(); // 232
-                  } // wrap callbacks we were passed. callbacks only fire when not paused and                                      // 233
-                  // are never undefined                                                                                           // 236
-                  // Filters out blacklisted fields according to cursor's projection.                                              // 237
-                  // XXX wrong place for this?                                                                                     // 238
-                  // furthermore, callbacks enqueue until the operation we're working on is                                        // 240
-                  // done.                                                                                                         // 241
+                    // 263
+                    query.resultsSnapshot = ordered ? [] : new LocalCollection._IdMap(); // 264
+                  } // wrap callbacks we were passed. callbacks only fire when not paused and                                      // 265
+                  // are never undefined                                                                                           // 268
+                  // Filters out blacklisted fields according to cursor's projection.                                              // 269
+                  // XXX wrong place for this?                                                                                     // 270
+                  // furthermore, callbacks enqueue until the operation we're working on is                                        // 272
+                  // done.                                                                                                         // 273
                   //
                   //
                   var wrapCallback = function (fn) {
-                    // 242
+                    // 274
                     if (!fn) {
-                      // 243
-                      return function () {}; // 244
-                    } // 245
+                      // 275
+                      return function () {}; // 276
+                    } // 277
                     //
-                    var self = _this3; // 247
+                    var self = _this4; // 279
                     return function () /* args*/{
-                      // 248
-                      var _this4 = this; // 248
+                      // 280
+                      var _this5 = this; // 280
                       //
                       if (self.collection.paused) {
-                        // 249
-                        return; // 250
-                      } // 251
+                        // 281
+                        return; // 282
+                      } // 283
                       //
-                      var args = arguments; // 253
+                      var args = arguments; // 285
                       //
                       self.collection._observeQueue.queueTask(function () {
-                        // 255
-                        fn.apply(_this4, args); // 256
-                      }); // 257
-                    }; // 258
-                  }; // 259
+                        // 287
+                        fn.apply(_this5, args); // 288
+                      }); // 289
+                    }; // 290
+                  }; // 291
                   //
-                  query.added = wrapCallback(options.added); // 261
-                  query.changed = wrapCallback(options.changed); // 262
-                  query.removed = wrapCallback(options.removed); // 263
+                  query.added = wrapCallback(options.added); // 293
+                  query.changed = wrapCallback(options.changed); // 294
+                  query.removed = wrapCallback(options.removed); // 295
                   //
                   if (ordered) {
-                    // 265
-                    query.addedBefore = wrapCallback(options.addedBefore); // 266
-                    query.movedBefore = wrapCallback(options.movedBefore); // 267
-                  } // 268
+                    // 297
+                    query.addedBefore = wrapCallback(options.addedBefore); // 298
+                    query.movedBefore = wrapCallback(options.movedBefore); // 299
+                  } // 300
                   //
                   if (!options._suppress_initial && !this.collection.paused) {
-                    // 270
-                    var results = ordered ? query.results : query.results._map; // 271
+                    // 302
+                    var results = ordered ? query.results : query.results._map; // 303
                     Object.keys(results).forEach(function (key) {
-                      // 273
-                      var doc = results[key]; // 274
-                      var fields = EJSON.clone(doc); // 275
-                      delete fields._id; // 277
+                      // 305
+                      var doc = results[key]; // 306
+                      var fields = EJSON.clone(doc); // 307
+                      delete fields._id; // 309
                       //
                       if (ordered) {
-                        // 279
-                        query.addedBefore(doc._id, _this3._projectionFn(fields), null); // 280
-                      } // 281
+                        // 311
+                        query.addedBefore(doc._id, _this4._projectionFn(fields), null); // 312
+                      } // 313
                       //
-                      query.added(doc._id, _this3._projectionFn(fields)); // 283
-                    }); // 284
-                  } // 285
+                      query.added(doc._id, _this4._projectionFn(fields)); // 315
+                    }); // 316
+                  } // 317
                   //
-                  var handle = Object.assign(new LocalCollection.ObserveHandle(), { // 287
-                    collection: this.collection, // 288
+                  var handle = Object.assign(new LocalCollection.ObserveHandle(), { // 319
+                    collection: this.collection, // 320
                     stop: function () {
-                      // 289
-                      if (_this3.reactive) {
-                        // 290
-                        delete _this3.collection.queries[qid]; // 291
-                      } // 292
-                    } // 293
-                  }); // 287
+                      // 321
+                      if (_this4.reactive) {
+                        // 322
+                        delete _this4.collection.queries[qid]; // 323
+                      } // 324
+                    } // 325
+                  }); // 319
                   //
                   if (this.reactive && Tracker.active) {
-                    // 296
-                    // XXX in many cases, the same observe will be recreated when                                                  // 297
-                    // the current autorun is rerun.  we could save work by                                                        // 298
-                    // letting it linger across rerun and potentially get                                                          // 299
-                    // repurposed if the same observe is performed, using logic                                                    // 300
-                    // similar to that of Meteor.subscribe.                                                                        // 301
+                    // 328
+                    // XXX in many cases, the same observe will be recreated when                                                  // 329
+                    // the current autorun is rerun.  we could save work by                                                        // 330
+                    // letting it linger across rerun and potentially get                                                          // 331
+                    // repurposed if the same observe is performed, using logic                                                    // 332
+                    // similar to that of Meteor.subscribe.                                                                        // 333
                     Tracker.onInvalidate(function () {
-                      // 302
-                      handle.stop(); // 303
-                    }); // 304
-                  } // run the observe callbacks resulting from the initial contents                                               // 305
-                  // before we leave the observe.                                                                                  // 308
+                      // 334
+                      handle.stop(); // 335
+                    }); // 336
+                  } // run the observe callbacks resulting from the initial contents                                               // 337
+                  // before we leave the observe.                                                                                  // 340
                   //
                   //
-                  this.collection._observeQueue.drain(); // 309
+                  this.collection._observeQueue.drain(); // 341
                   //
-                  return handle; // 311
-                } // 312
+                  return handle; // 343
+                } // 344
                 //
                 return observeChanges; //
               }(); // Since we don't actually have a "nextObject" interface, there's really no                                     //
-              // reason to have a "rewind" interface.  All it did was make multiple calls                                          // 315
-              // to fetch/map/forEach return nothing the second time.                                                              // 316
-              // XXX COMPAT WITH 0.8.1                                                                                             // 317
+              // reason to have a "rewind" interface.  All it did was make multiple calls                                          // 347
+              // to fetch/map/forEach return nothing the second time.                                                              // 348
+              // XXX COMPAT WITH 0.8.1                                                                                             // 349
               //
               //
               Cursor.prototype.rewind = function () {
@@ -30197,7 +30497,7 @@ __meteor_runtime_config__ = {
                 //
                 return rewind; //
               }(); // XXX Maybe we need a version of observe that just calls a callback if                                         //
-              // anything changed.                                                                                                 // 321
+              // anything changed.                                                                                                 // 353
               //
               //
               Cursor.prototype._depend = function () {
@@ -30205,25 +30505,25 @@ __meteor_runtime_config__ = {
                 function _depend(changers, _allow_unordered) {
                   //
                   if (Tracker.active) {
-                    // 323
-                    var dependency = new Tracker.Dependency(); // 324
-                    var notify = dependency.changed.bind(dependency); // 325
-                    dependency.depend(); // 327
-                    var options = { // 329
-                      _allow_unordered: _allow_unordered, // 329
-                      _suppress_initial: true // 329
-                    }; // 329
+                    // 355
+                    var dependency = new Tracker.Dependency(); // 356
+                    var notify = dependency.changed.bind(dependency); // 357
+                    dependency.depend(); // 359
+                    var options = { // 361
+                      _allow_unordered: _allow_unordered, // 361
+                      _suppress_initial: true // 361
+                    }; // 361
                     ['added', 'addedBefore', 'changed', 'movedBefore', 'removed'].forEach(function (fn) {
-                      // 331
+                      // 363
                       if (changers[fn]) {
-                        // 333
-                        options[fn] = notify; // 334
-                      } // 335
-                    }); // observeChanges will stop() when this computation is invalidated                                         // 336
+                        // 365
+                        options[fn] = notify; // 366
+                      } // 367
+                    }); // observeChanges will stop() when this computation is invalidated                                         // 368
                     //
-                    this.observeChanges(options); // 339
-                  } // 340
-                } // 341
+                    this.observeChanges(options); // 371
+                  } // 372
+                } // 373
                 //
                 return _depend; //
               }(); //
@@ -30232,127 +30532,127 @@ __meteor_runtime_config__ = {
                 //
                 function _getCollectionName() {
                   //
-                  return this.collection.name; // 344
-                } // 345
+                  return this.collection.name; // 376
+                } // 377
                 //
                 return _getCollectionName; //
               }(); // Returns a collection of matching objects, but doesn't deep copy them.                                        //
-              //                                                                                                                   // 348
-              // If ordered is set, returns a sorted array, respecting sorter, skip, and                                           // 349
-              // limit properties of the query.  if sorter is falsey, no sort -- you get the                                       // 350
-              // natural order.                                                                                                    // 351
-              //                                                                                                                   // 352
-              // If ordered is not set, returns an object mapping from ID to doc (sorter,                                          // 353
-              // skip and limit should not be set).                                                                                // 354
-              //                                                                                                                   // 355
-              // If ordered is set and this cursor is a $near geoquery, then this function                                         // 356
-              // will use an _IdMap to track each distance from the $near argument point in                                        // 357
-              // order to use it as a sort key. If an _IdMap is passed in the 'distances'                                          // 358
-              // argument, this function will clear it and use it for this purpose                                                 // 359
-              // (otherwise it will just create its own _IdMap). The observeChanges                                                // 360
-              // implementation uses this to remember the distances after this function                                            // 361
-              // returns.                                                                                                          // 362
+              //                                                                                                                   // 380
+              // If ordered is set, returns a sorted array, respecting sorter, skip, and                                           // 381
+              // limit properties of the query.  if sorter is falsey, no sort -- you get the                                       // 382
+              // natural order.                                                                                                    // 383
+              //                                                                                                                   // 384
+              // If ordered is not set, returns an object mapping from ID to doc (sorter,                                          // 385
+              // skip and limit should not be set).                                                                                // 386
+              //                                                                                                                   // 387
+              // If ordered is set and this cursor is a $near geoquery, then this function                                         // 388
+              // will use an _IdMap to track each distance from the $near argument point in                                        // 389
+              // order to use it as a sort key. If an _IdMap is passed in the 'distances'                                          // 390
+              // argument, this function will clear it and use it for this purpose                                                 // 391
+              // (otherwise it will just create its own _IdMap). The observeChanges                                                // 392
+              // implementation uses this to remember the distances after this function                                            // 393
+              // returns.                                                                                                          // 394
               //
               //
               Cursor.prototype._getRawObjects = function () {
                 //
                 function _getRawObjects() {
                   //
-                  var _this5 = this; // 363
+                  var _this6 = this; // 395
                   //
-                  var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {}; // 363
-                  // XXX use OrderedDict instead of array, and make IdMap and OrderedDict                                          // 364
-                  // compatible                                                                                                    // 365
-                  var results = options.ordered ? [] : new LocalCollection._IdMap(); // fast path for single ID value              // 366
+                  var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {}; // 395
+                  // XXX use OrderedDict instead of array, and make IdMap and OrderedDict                                          // 396
+                  // compatible                                                                                                    // 397
+                  var results = options.ordered ? [] : new LocalCollection._IdMap(); // fast path for single ID value              // 398
                   //
                   if (this._selectorId !== undefined) {
-                    // 369
-                    // If you have non-zero skip and ask for a single id, you get                                                  // 370
-                    // nothing. This is so it matches the behavior of the '{_id: foo}'                                             // 371
-                    // path.                                                                                                       // 372
+                    // 401
+                    // If you have non-zero skip and ask for a single id, you get                                                  // 402
+                    // nothing. This is so it matches the behavior of the '{_id: foo}'                                             // 403
+                    // path.                                                                                                       // 404
                     if (this.skip) {
-                      // 373
-                      return results; // 374
-                    } // 375
+                      // 405
+                      return results; // 406
+                    } // 407
                     //
-                    var selectedDoc = this.collection._docs.get(this._selectorId); // 377
+                    var selectedDoc = this.collection._docs.get(this._selectorId); // 409
                     //
                     if (selectedDoc) {
-                      // 379
+                      // 411
                       if (options.ordered) {
-                        // 380
-                        results.push(selectedDoc); // 381
+                        // 412
+                        results.push(selectedDoc); // 413
                       } else {
-                        // 382
-                        results.set(this._selectorId, selectedDoc); // 383
-                      } // 384
-                    } // 385
+                        // 414
+                        results.set(this._selectorId, selectedDoc); // 415
+                      } // 416
+                    } // 417
                     //
-                    return results; // 387
-                  } // slow path for arbitrary selector, sort, skip, limit                                                         // 388
-                  // in the observeChanges case, distances is actually part of the "query"                                         // 392
-                  // (ie, live results set) object.  in other cases, distances is only used                                        // 393
-                  // inside this function.                                                                                         // 394
+                    return results; // 419
+                  } // slow path for arbitrary selector, sort, skip, limit                                                         // 420
+                  // in the observeChanges case, distances is actually part of the "query"                                         // 424
+                  // (ie, live results set) object.  in other cases, distances is only used                                        // 425
+                  // inside this function.                                                                                         // 426
                   //
                   //
-                  var distances = void 0; // 395
+                  var distances = void 0; // 427
                   //
                   if (this.matcher.hasGeoQuery() && options.ordered) {
-                    // 396
+                    // 428
                     if (options.distances) {
-                      // 397
-                      distances = options.distances; // 398
-                      distances.clear(); // 399
+                      // 429
+                      distances = options.distances; // 430
+                      distances.clear(); // 431
                     } else {
-                      // 400
-                      distances = new LocalCollection._IdMap(); // 401
-                    } // 402
-                  } // 403
+                      // 432
+                      distances = new LocalCollection._IdMap(); // 433
+                    } // 434
+                  } // 435
                   //
                   this.collection._docs.forEach(function (doc, id) {
-                    // 405
-                    var matchResult = _this5.matcher.documentMatches(doc); // 406
+                    // 437
+                    var matchResult = _this6.matcher.documentMatches(doc); // 438
                     //
                     if (matchResult.result) {
-                      // 408
+                      // 440
                       if (options.ordered) {
-                        // 409
-                        results.push(doc); // 410
+                        // 441
+                        results.push(doc); // 442
                         //
                         if (distances && matchResult.distance !== undefined) {
-                          // 412
-                          distances.set(id, matchResult.distance); // 413
-                        } // 414
+                          // 444
+                          distances.set(id, matchResult.distance); // 445
+                        } // 446
                       } else {
-                        // 415
-                        results.set(id, doc); // 416
-                      } // 417
-                    } // Fast path for limited unsorted queries.                                                                   // 418
-                    // XXX 'length' check here seems wrong for ordered                                                             // 421
+                        // 447
+                        results.set(id, doc); // 448
+                      } // 449
+                    } // Fast path for limited unsorted queries.                                                                   // 450
+                    // XXX 'length' check here seems wrong for ordered                                                             // 453
                     //
                     //
-                    return !_this5.limit || _this5.skip || _this5.sorter || results.length !== _this5.limit; // 422
-                  }); // 428
+                    return !_this6.limit || _this6.skip || _this6.sorter || results.length !== _this6.limit; // 454
+                  }); // 460
                   //
                   if (!options.ordered) {
-                    // 430
-                    return results; // 431
-                  } // 432
+                    // 462
+                    return results; // 463
+                  } // 464
                   //
                   if (this.sorter) {
-                    // 434
-                    results.sort(this.sorter.getComparator({ // 435
-                      distances: distances // 435
-                    })); // 435
-                  } // 436
+                    // 466
+                    results.sort(this.sorter.getComparator({ // 467
+                      distances: distances // 467
+                    })); // 467
+                  } // 468
                   //
                   if (!this.limit && !this.skip) {
-                    // 438
-                    return results; // 439
-                  } // 440
+                    // 470
+                    return results; // 471
+                  } // 472
                   //
-                  return results.slice(this.skip, this.limit ? this.limit + this.skip : results.length); // 442
-                } // 446
+                  return results.slice(this.skip, this.limit ? this.limit + this.skip : results.length); // 474
+                } // 478
                 //
                 return _getRawObjects; //
               }(); //
@@ -30361,19 +30661,19 @@ __meteor_runtime_config__ = {
                 //
                 function _publishCursor(subscription) {
                   //
-                  // XXX minimongo should not depend on mongo-livedata!                                                            // 449
+                  // XXX minimongo should not depend on mongo-livedata!                                                            // 481
                   if (!Package.mongo) {
-                    // 450
-                    throw new Error('Can\'t publish from Minimongo without the `mongo` package.'); // 451
-                  } // 454
+                    // 482
+                    throw new Error('Can\'t publish from Minimongo without the `mongo` package.'); // 483
+                  } // 486
                   //
                   if (!this.collection.name) {
-                    // 456
-                    throw new Error('Can\'t publish a cursor from a collection without a name.'); // 457
-                  } // 460
+                    // 488
+                    throw new Error('Can\'t publish a cursor from a collection without a name.'); // 489
+                  } // 492
                   //
-                  return Package.mongo.Mongo.Collection._publishCursor(this, subscription, this.collection.name); // 462
-                } // 467
+                  return Package.mongo.Mongo.Collection._publishCursor(this, subscription, this.collection.name); // 494
+                } // 499
                 //
                 return _publishCursor; //
               }(); //
@@ -32512,9 +32812,9 @@ __meteor_runtime_config__ = {
                       // 1711
                       return LocalCollection._f._equal(value, element); // 1711
                     })) {
-                        // 1711
-                        return; // 1712
-                      } // 1713
+                      // 1711
+                      return; // 1712
+                    } // 1713
                     //
                     toAdd.push(value); // 1715
                   }); // 1716
@@ -33004,59 +33304,57 @@ __meteor_runtime_config__ = {
                         result: !!selector.call(doc) // 86
                       }; // 86
                     }; // 86
-                  } // shorthand -- scalar _id and {_id}                                                                           // 87
+                  } // shorthand -- scalar _id                                                                                     // 87
                   //
                   //
-                  if (LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
+                  if (LocalCollection._selectorIsId(selector)) {
                     // 90
-                    var _id = selector._id || selector; // 91
+                    this._selector = { // 91
+                      _id: selector // 91
+                    }; // 91
                     //
-                    this._selector = { // 93
-                      _id: _id // 93
-                    }; // 93
-                    //
-                    this._recordPathUsed('_id'); // 94
+                    this._recordPathUsed('_id'); // 92
                     //
                     return function (doc) {
-                      // 96
-                      return { // 96
-                        result: EJSON.equals(doc._id, _id) // 96
-                      }; // 96
-                    }; // 96
-                  } // protect against dangerous selectors.  falsey and {_id: falsey} are both                                     // 97
-                  // likely programmer error, and not what you want, particularly for                                              // 100
-                  // destructive operations.                                                                                       // 101
+                      // 94
+                      return { // 94
+                        result: EJSON.equals(doc._id, selector) // 94
+                      }; // 94
+                    }; // 94
+                  } // protect against dangerous selectors.  falsey and {_id: falsey} are both                                     // 95
+                  // likely programmer error, and not what you want, particularly for                                              // 98
+                  // destructive operations.                                                                                       // 99
                   //
                   //
                   if (!selector || hasOwn.call(selector, '_id') && !selector._id) {
-                    // 102
-                    this._isSimple = false; // 103
-                    return nothingMatcher; // 104
-                  } // Top level can't be an array or true or binary.                                                              // 105
+                    // 100
+                    this._isSimple = false; // 101
+                    return nothingMatcher; // 102
+                  } // Top level can't be an array or true or binary.                                                              // 103
                   //
                   //
                   if (Array.isArray(selector) || EJSON.isBinary(selector) || typeof selector === 'boolean') {
-                    // 108
-                    throw new Error("Invalid selector: " + selector); // 111
-                  } // 112
+                    // 106
+                    throw new Error("Invalid selector: " + selector); // 109
+                  } // 110
                   //
-                  this._selector = EJSON.clone(selector); // 114
-                  return compileDocumentSelector(selector, this, { // 116
-                    isRoot: true // 116
-                  }); // 116
-                } // 117
+                  this._selector = EJSON.clone(selector); // 112
+                  return compileDocumentSelector(selector, this, { // 114
+                    isRoot: true // 114
+                  }); // 114
+                } // 115
                 //
                 return _compileSelector; //
               }(); // Returns a list of key paths the given selector is looking for. It includes                                   //
-              // the empty string if there is a $where.                                                                            // 120
+              // the empty string if there is a $where.                                                                            // 118
               //
               //
               Matcher.prototype._getPaths = function () {
                 //
                 function _getPaths() {
                   //
-                  return Object.keys(this._paths); // 122
-                } // 123
+                  return Object.keys(this._paths); // 120
+                } // 121
                 //
                 return _getPaths; //
               }(); //
@@ -33065,8 +33363,8 @@ __meteor_runtime_config__ = {
                 //
                 function _recordPathUsed(path) {
                   //
-                  this._paths[path] = true; // 126
-                } // 127
+                  this._paths[path] = true; // 124
+                } // 125
                 //
                 return _recordPathUsed; //
               }(); //
@@ -33074,263 +33372,263 @@ __meteor_runtime_config__ = {
               return Matcher; //
             }(); //
             //
-            // helpers used by compiled selector code                                                                              // 130
-            LocalCollection._f = { // 131
-              // XXX for _all and _in, consider building 'inquery' at compile time..                                               // 132
+            // helpers used by compiled selector code                                                                              // 128
+            LocalCollection._f = { // 129
+              // XXX for _all and _in, consider building 'inquery' at compile time..                                               // 130
               _type: function (v) {
-                // 133
+                // 131
                 if (typeof v === 'number') {
-                  // 134
-                  return 1; // 135
-                } // 136
+                  // 132
+                  return 1; // 133
+                } // 134
                 //
                 if (typeof v === 'string') {
-                  // 138
-                  return 2; // 139
-                } // 140
+                  // 136
+                  return 2; // 137
+                } // 138
                 //
                 if (typeof v === 'boolean') {
-                  // 142
-                  return 8; // 143
-                } // 144
+                  // 140
+                  return 8; // 141
+                } // 142
                 //
                 if (Array.isArray(v)) {
-                  // 146
-                  return 4; // 147
-                } // 148
+                  // 144
+                  return 4; // 145
+                } // 146
                 //
                 if (v === null) {
-                  // 150
-                  return 10; // 151
-                } // note that typeof(/x/) === "object"                                                                            // 152
+                  // 148
+                  return 10; // 149
+                } // note that typeof(/x/) === "object"                                                                            // 150
                 //
                 //
                 if (v instanceof RegExp) {
-                  // 155
-                  return 11; // 156
-                } // 157
+                  // 153
+                  return 11; // 154
+                } // 155
                 //
                 if (typeof v === 'function') {
-                  // 159
-                  return 13; // 160
-                } // 161
+                  // 157
+                  return 13; // 158
+                } // 159
                 //
                 if (v instanceof Date) {
-                  // 163
-                  return 9; // 164
-                } // 165
+                  // 161
+                  return 9; // 162
+                } // 163
                 //
                 if (EJSON.isBinary(v)) {
-                  // 167
-                  return 5; // 168
-                } // 169
+                  // 165
+                  return 5; // 166
+                } // 167
                 //
                 if (v instanceof MongoID.ObjectID) {
-                  // 171
-                  return 7; // 172
-                } // object                                                                                                        // 173
+                  // 169
+                  return 7; // 170
+                } // object                                                                                                        // 171
                 //
                 //
-                return 3; // XXX support some/all of these:                                                                        // 176
-                // 14, symbol                                                                                                      // 179
-                // 15, javascript code with scope                                                                                  // 180
-                // 16, 18: 32-bit/64-bit integer                                                                                   // 181
-                // 17, timestamp                                                                                                   // 182
-                // 255, minkey                                                                                                     // 183
-                // 127, maxkey                                                                                                     // 184
-              }, // 185
-              // deep equality test: use for literal document and array matches                                                    // 187
+                return 3; // XXX support some/all of these:                                                                        // 174
+                // 14, symbol                                                                                                      // 177
+                // 15, javascript code with scope                                                                                  // 178
+                // 16, 18: 32-bit/64-bit integer                                                                                   // 179
+                // 17, timestamp                                                                                                   // 180
+                // 255, minkey                                                                                                     // 181
+                // 127, maxkey                                                                                                     // 182
+              }, // 183
+              // deep equality test: use for literal document and array matches                                                    // 185
               _equal: function (a, b) {
-                // 188
-                return EJSON.equals(a, b, { // 189
-                  keyOrderSensitive: true // 189
-                }); // 189
-              }, // 190
-              // maps a type code to a value that can be used to sort values of different                                          // 192
-              // types                                                                                                             // 193
+                // 186
+                return EJSON.equals(a, b, { // 187
+                  keyOrderSensitive: true // 187
+                }); // 187
+              }, // 188
+              // maps a type code to a value that can be used to sort values of different                                          // 190
+              // types                                                                                                             // 191
               _typeorder: function (t) {
-                // 194
-                // http://www.mongodb.org/display/DOCS/What+is+the+Compare+Order+for+BSON+Types                                    // 195
-                // XXX what is the correct sort position for Javascript code?                                                      // 196
-                // ('100' in the matrix below)                                                                                     // 197
-                // XXX minkey/maxkey                                                                                               // 198
-                return [-1, // (not a type)                                                                                        // 199
-                1, // number                                                                                                       // 201
-                2, // string                                                                                                       // 202
-                3, // object                                                                                                       // 203
-                4, // array                                                                                                        // 204
-                5, // binary                                                                                                       // 205
-                -1, // deprecated                                                                                                  // 206
-                6, // ObjectID                                                                                                     // 207
-                7, // bool                                                                                                         // 208
-                8, // Date                                                                                                         // 209
-                0, // null                                                                                                         // 210
-                9, // RegExp                                                                                                       // 211
-                -1, // deprecated                                                                                                  // 212
+                // 192
+                // http://www.mongodb.org/display/DOCS/What+is+the+Compare+Order+for+BSON+Types                                    // 193
+                // XXX what is the correct sort position for Javascript code?                                                      // 194
+                // ('100' in the matrix below)                                                                                     // 195
+                // XXX minkey/maxkey                                                                                               // 196
+                return [-1, // (not a type)                                                                                        // 197
+                1, // number                                                                                                       // 199
+                2, // string                                                                                                       // 200
+                3, // object                                                                                                       // 201
+                4, // array                                                                                                        // 202
+                5, // binary                                                                                                       // 203
+                -1, // deprecated                                                                                                  // 204
+                6, // ObjectID                                                                                                     // 205
+                7, // bool                                                                                                         // 206
+                8, // Date                                                                                                         // 207
+                0, // null                                                                                                         // 208
+                9, // RegExp                                                                                                       // 209
+                -1, // deprecated                                                                                                  // 210
+                100, // JS code                                                                                                    // 211
+                2, // deprecated (symbol)                                                                                          // 212
                 100, // JS code                                                                                                    // 213
-                2, // deprecated (symbol)                                                                                          // 214
-                100, // JS code                                                                                                    // 215
-                1, // 32-bit int                                                                                                   // 216
-                8, // Mongo timestamp                                                                                              // 217
-                1 // 64-bit int                                                                                                    // 218
-                ][t]; // 199
-              }, // 220
-              // compare two values of unknown type according to BSON ordering                                                     // 222
-              // semantics. (as an extension, consider 'undefined' to be less than                                                 // 223
-              // any other value.) return negative if a is less, positive if b is                                                  // 224
-              // less, or 0 if equal                                                                                               // 225
+                1, // 32-bit int                                                                                                   // 214
+                8, // Mongo timestamp                                                                                              // 215
+                1 // 64-bit int                                                                                                    // 216
+                ][t]; // 197
+              }, // 218
+              // compare two values of unknown type according to BSON ordering                                                     // 220
+              // semantics. (as an extension, consider 'undefined' to be less than                                                 // 221
+              // any other value.) return negative if a is less, positive if b is                                                  // 222
+              // less, or 0 if equal                                                                                               // 223
               _cmp: function (a, b) {
-                // 226
+                // 224
                 if (a === undefined) {
-                  // 227
-                  return b === undefined ? 0 : -1; // 228
-                } // 229
+                  // 225
+                  return b === undefined ? 0 : -1; // 226
+                } // 227
                 //
                 if (b === undefined) {
-                  // 231
-                  return 1; // 232
-                } // 233
+                  // 229
+                  return 1; // 230
+                } // 231
                 //
-                var ta = LocalCollection._f._type(a); // 235
+                var ta = LocalCollection._f._type(a); // 233
                 //
-                var tb = LocalCollection._f._type(b); // 236
+                var tb = LocalCollection._f._type(b); // 234
                 //
-                var oa = LocalCollection._f._typeorder(ta); // 238
+                var oa = LocalCollection._f._typeorder(ta); // 236
                 //
-                var ob = LocalCollection._f._typeorder(tb); // 239
+                var ob = LocalCollection._f._typeorder(tb); // 237
                 //
                 if (oa !== ob) {
-                  // 241
-                  return oa < ob ? -1 : 1; // 242
-                } // XXX need to implement this if we implement Symbol or integers, or                                             // 243
-                // Timestamp                                                                                                       // 246
+                  // 239
+                  return oa < ob ? -1 : 1; // 240
+                } // XXX need to implement this if we implement Symbol or integers, or                                             // 241
+                // Timestamp                                                                                                       // 244
                 //
                 //
                 if (ta !== tb) {
-                  // 247
-                  throw Error('Missing type coercion logic in _cmp'); // 248
-                } // 249
+                  // 245
+                  throw Error('Missing type coercion logic in _cmp'); // 246
+                } // 247
                 //
                 if (ta === 7) {
-                  // 251
-                  // ObjectID                                                                                                      // 251
-                  // Convert to string.                                                                                            // 252
-                  ta = tb = 2; // 253
-                  a = a.toHexString(); // 254
-                  b = b.toHexString(); // 255
-                } // 256
+                  // 249
+                  // ObjectID                                                                                                      // 249
+                  // Convert to string.                                                                                            // 250
+                  ta = tb = 2; // 251
+                  a = a.toHexString(); // 252
+                  b = b.toHexString(); // 253
+                } // 254
                 //
                 if (ta === 9) {
-                  // 258
-                  // Date                                                                                                          // 258
-                  // Convert to millis.                                                                                            // 259
-                  ta = tb = 1; // 260
-                  a = a.getTime(); // 261
-                  b = b.getTime(); // 262
-                } // 263
+                  // 256
+                  // Date                                                                                                          // 256
+                  // Convert to millis.                                                                                            // 257
+                  ta = tb = 1; // 258
+                  a = a.getTime(); // 259
+                  b = b.getTime(); // 260
+                } // 261
                 //
-                if (ta === 1) // double                                                                                            // 265
-                  return a - b; // 266
-                if (tb === 2) // string                                                                                            // 268
-                  return a < b ? -1 : a === b ? 0 : 1; // 269
+                if (ta === 1) // double                                                                                            // 263
+                  return a - b; // 264
+                if (tb === 2) // string                                                                                            // 266
+                  return a < b ? -1 : a === b ? 0 : 1; // 267
                 //
                 if (ta === 3) {
-                  // 271
-                  // Object                                                                                                        // 271
-                  // this could be much more efficient in the expected case ...                                                    // 272
+                  // 269
+                  // Object                                                                                                        // 269
+                  // this could be much more efficient in the expected case ...                                                    // 270
                   var toArray = function (object) {
-                    // 273
-                    var result = []; // 274
+                    // 271
+                    var result = []; // 272
                     Object.keys(object).forEach(function (key) {
-                      // 276
-                      result.push(key, object[key]); // 277
-                    }); // 278
-                    return result; // 280
-                  }; // 281
+                      // 274
+                      result.push(key, object[key]); // 275
+                    }); // 276
+                    return result; // 278
+                  }; // 279
                   //
-                  return LocalCollection._f._cmp(toArray(a), toArray(b)); // 283
-                } // 284
+                  return LocalCollection._f._cmp(toArray(a), toArray(b)); // 281
+                } // 282
                 //
                 if (ta === 4) {
-                  // 286
-                  // Array                                                                                                         // 286
+                  // 284
+                  // Array                                                                                                         // 284
                   for (var i = 0;; i++) {
-                    // 287
+                    // 285
                     if (i === a.length) {
-                      // 288
-                      return i === b.length ? 0 : -1; // 289
-                    } // 290
+                      // 286
+                      return i === b.length ? 0 : -1; // 287
+                    } // 288
                     //
                     if (i === b.length) {
-                      // 292
-                      return 1; // 293
-                    } // 294
+                      // 290
+                      return 1; // 291
+                    } // 292
                     //
-                    var s = LocalCollection._f._cmp(a[i], b[i]); // 296
+                    var s = LocalCollection._f._cmp(a[i], b[i]); // 294
                     //
                     if (s !== 0) {
-                      // 297
-                      return s; // 298
-                    } // 299
-                  } // 300
-                } // 301
+                      // 295
+                      return s; // 296
+                    } // 297
+                  } // 298
+                } // 299
                 //
                 if (ta === 5) {
-                  // 303
-                  // binary                                                                                                        // 303
-                  // Surprisingly, a small binary blob is always less than a large one in                                          // 304
-                  // Mongo.                                                                                                        // 305
+                  // 301
+                  // binary                                                                                                        // 301
+                  // Surprisingly, a small binary blob is always less than a large one in                                          // 302
+                  // Mongo.                                                                                                        // 303
                   if (a.length !== b.length) {
-                    // 306
-                    return a.length - b.length; // 307
-                  } // 308
+                    // 304
+                    return a.length - b.length; // 305
+                  } // 306
                   //
                   for (var _i = 0; _i < a.length; _i++) {
-                    // 310
+                    // 308
                     if (a[_i] < b[_i]) {
-                      // 311
-                      return -1; // 312
-                    } // 313
+                      // 309
+                      return -1; // 310
+                    } // 311
                     //
                     if (a[_i] > b[_i]) {
-                      // 315
-                      return 1; // 316
-                    } // 317
-                  } // 318
+                      // 313
+                      return 1; // 314
+                    } // 315
+                  } // 316
                   //
-                  return 0; // 320
-                } // 321
+                  return 0; // 318
+                } // 319
                 //
                 if (ta === 8) {
-                  // 323
-                  // boolean                                                                                                       // 323
+                  // 321
+                  // boolean                                                                                                       // 321
                   if (a) {
-                    // 324
-                    return b ? 0 : 1; // 325
-                  } // 326
+                    // 322
+                    return b ? 0 : 1; // 323
+                  } // 324
                   //
-                  return b ? -1 : 0; // 328
-                } // 329
+                  return b ? -1 : 0; // 326
+                } // 327
                 //
-                if (ta === 10) // null                                                                                             // 331
-                  return 0; // 332
-                if (ta === 11) // regexp                                                                                           // 334
-                  throw Error('Sorting not supported on regular expression'); // XXX                                               // 335
-                // 13: javascript code                                                                                             // 337
-                // 14: symbol                                                                                                      // 338
-                // 15: javascript code with scope                                                                                  // 339
-                // 16: 32-bit integer                                                                                              // 340
-                // 17: timestamp                                                                                                   // 341
-                // 18: 64-bit integer                                                                                              // 342
-                // 255: minkey                                                                                                     // 343
-                // 127: maxkey                                                                                                     // 344
+                if (ta === 10) // null                                                                                             // 329
+                  return 0; // 330
+                if (ta === 11) // regexp                                                                                           // 332
+                  throw Error('Sorting not supported on regular expression'); // XXX                                               // 333
+                // 13: javascript code                                                                                             // 335
+                // 14: symbol                                                                                                      // 336
+                // 15: javascript code with scope                                                                                  // 337
+                // 16: 32-bit integer                                                                                              // 338
+                // 17: timestamp                                                                                                   // 339
+                // 18: 64-bit integer                                                                                              // 340
+                // 255: minkey                                                                                                     // 341
+                // 127: maxkey                                                                                                     // 342
                 //
-                if (ta === 13) // javascript code                                                                                  // 345
-                  throw Error('Sorting not supported on Javascript code'); // XXX                                                  // 346
+                if (ta === 13) // javascript code                                                                                  // 343
+                  throw Error('Sorting not supported on Javascript code'); // XXX                                                  // 344
                 //
-                throw Error('Unknown type to sort'); // 348
-              } // 349
-            }; // 131
+                throw Error('Unknown type to sort'); // 346
+              } // 347
+            }; // 129
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
           }, "minimongo_common.js": function (_require7, _exports7, _module6) {
 
@@ -34071,7 +34369,6 @@ __meteor_runtime_config__ = {
   var Meteor = Package.meteor.Meteor;
   var global = Package.meteor.global;
   var meteorEnv = Package.meteor.meteorEnv;
-  var _ = Package.underscore._;
   var LocalCollection = Package.minimongo.LocalCollection;
   var Minimongo = Package.minimongo.Minimongo;
   var check = Package.check.check;
@@ -34090,576 +34387,588 @@ __meteor_runtime_config__ = {
 
   var _require = meteorInstall({ "node_modules": { "meteor": { "allow-deny": { "allow-deny.js": function () {
 
-            ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            //                                                                                                               //
-            // packages/allow-deny/allow-deny.js                                                                             //
-            //                                                                                                               //
-            ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            //                                                                                                                    //
+            // packages/allow-deny/allow-deny.js                                                                                  //
+            //                                                                                                                    //
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //
-            ///                                                                                                              // 1
-            /// Remote methods and access control.                                                                           // 2
-            ///                                                                                                              // 3
-            // Restrict default mutators on collection. allow() and deny() take the                                          // 5
-            // same options:                                                                                                 // 6
-            //                                                                                                               // 7
-            // options.insert {Function(userId, doc)}                                                                        // 8
-            //   return true to allow/deny adding this document                                                              // 9
-            //                                                                                                               // 10
-            // options.update {Function(userId, docs, fields, modifier)}                                                     // 11
-            //   return true to allow/deny updating these documents.                                                         // 12
-            //   `fields` is passed as an array of fields that are to be modified                                            // 13
-            //                                                                                                               // 14
-            // options.remove {Function(userId, docs)}                                                                       // 15
-            //   return true to allow/deny removing these documents                                                          // 16
-            //                                                                                                               // 17
-            // options.fetch {Array}                                                                                         // 18
-            //   Fields to fetch for these validators. If any call to allow or deny                                          // 19
-            //   does not have this option then all fields are loaded.                                                       // 20
-            //                                                                                                               // 21
-            // allow and deny can be called multiple times. The validators are                                               // 22
-            // evaluated as follows:                                                                                         // 23
-            // - If neither deny() nor allow() has been called on the collection,                                            // 24
-            //   then the request is allowed if and only if the "insecure" smart                                             // 25
-            //   package is in use.                                                                                          // 26
-            // - Otherwise, if any deny() function returns true, the request is denied.                                      // 27
-            // - Otherwise, if any allow() function returns true, the request is allowed.                                    // 28
-            // - Otherwise, the request is denied.                                                                           // 29
-            //                                                                                                               // 30
-            // Meteor may call your deny() and allow() functions in any order, and may not                                   // 31
-            // call all of them if it is able to make a decision without calling them all                                    // 32
-            // (so don't include side effects).                                                                              // 33
-            AllowDeny = { // 35
-              CollectionPrototype: {} // 36
-            }; // In the `mongo` package, we will extend Mongo.Collection.prototype with these                               // 35
-            // methods                                                                                                       // 40
+            ///                                                                                                                   // 1
+            /// Remote methods and access control.                                                                                // 2
+            ///                                                                                                                   // 3
+            var hasOwn = Object.prototype.hasOwnProperty; // Restrict default mutators on collection. allow() and deny() take the
+            // same options:                                                                                                      // 8
+            //                                                                                                                    // 9
+            // options.insert {Function(userId, doc)}                                                                             // 10
+            //   return true to allow/deny adding this document                                                                   // 11
+            //                                                                                                                    // 12
+            // options.update {Function(userId, docs, fields, modifier)}                                                          // 13
+            //   return true to allow/deny updating these documents.                                                              // 14
+            //   `fields` is passed as an array of fields that are to be modified                                                 // 15
+            //                                                                                                                    // 16
+            // options.remove {Function(userId, docs)}                                                                            // 17
+            //   return true to allow/deny removing these documents                                                               // 18
+            //                                                                                                                    // 19
+            // options.fetch {Array}                                                                                              // 20
+            //   Fields to fetch for these validators. If any call to allow or deny                                               // 21
+            //   does not have this option then all fields are loaded.                                                            // 22
+            //                                                                                                                    // 23
+            // allow and deny can be called multiple times. The validators are                                                    // 24
+            // evaluated as follows:                                                                                              // 25
+            // - If neither deny() nor allow() has been called on the collection,                                                 // 26
+            //   then the request is allowed if and only if the "insecure" smart                                                  // 27
+            //   package is in use.                                                                                               // 28
+            // - Otherwise, if any deny() function returns true, the request is denied.                                           // 29
+            // - Otherwise, if any allow() function returns true, the request is allowed.                                         // 30
+            // - Otherwise, the request is denied.                                                                                // 31
+            //                                                                                                                    // 32
+            // Meteor may call your deny() and allow() functions in any order, and may not                                        // 33
+            // call all of them if it is able to make a decision without calling them all                                         // 34
+            // (so don't include side effects).                                                                                   // 35
             //
-            var CollectionPrototype = AllowDeny.CollectionPrototype; /**                                                     // 41
+            AllowDeny = { // 37
+              CollectionPrototype: {} // 38
+            }; // In the `mongo` package, we will extend Mongo.Collection.prototype with these                                    // 37
+            // methods                                                                                                            // 42
+            //
+            var CollectionPrototype = AllowDeny.CollectionPrototype; /**                                                          // 43
                                                                       * @summary Allow users to write directly to this collection from client code, subject to limitations you define.
-                                                                      * @locus Server                                        //
-                                                                      * @method allow                                        //
-                                                                      * @memberOf Mongo.Collection                           //
-                                                                      * @instance                                            //
-                                                                      * @param {Object} options                              //
+                                                                      * @locus Server                                             //
+                                                                      * @method allow                                             //
+                                                                      * @memberOf Mongo.Collection                                //
+                                                                      * @instance                                                 //
+                                                                      * @param {Object} options                                   //
                                                                       * @param {Function} options.insert,update,remove Functions that look at a proposed modification to the database and return true if it should be allowed.
                                                                       * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
                                                                       * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
                                                                       */ //
             //
             CollectionPrototype.allow = function (options) {
-              // 54
-              addValidator(this, 'allow', options); // 55
-            }; /**                                                                                                           // 56
-                * @summary Override `allow` rules.                                                                           //
-                * @locus Server                                                                                              //
-                * @method deny                                                                                               //
-                * @memberOf Mongo.Collection                                                                                 //
-                * @instance                                                                                                  //
-                * @param {Object} options                                                                                    //
+              // 56
+              addValidator(this, 'allow', options); // 57
+            }; /**                                                                                                                // 58
+                * @summary Override `allow` rules.                                                                                //
+                * @locus Server                                                                                                   //
+                * @method deny                                                                                                    //
+                * @memberOf Mongo.Collection                                                                                      //
+                * @instance                                                                                                       //
+                * @param {Object} options                                                                                         //
                 * @param {Function} options.insert,update,remove Functions that look at a proposed modification to the database and return true if it should be denied, even if an [allow](#allow) rule says otherwise.
                 * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
                 * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
                 */ //
             //
             CollectionPrototype.deny = function (options) {
-              // 69
-              addValidator(this, 'deny', options); // 70
-            }; // 71
+              // 71
+              addValidator(this, 'deny', options); // 72
+            }; // 73
             //
             CollectionPrototype._defineMutationMethods = function (options) {
-              // 73
-              var self = this; // 74
-              options = options || {}; // set to true once we call any allow or deny methods. If true, use                   // 75
-              // allow/deny semantics. If false, use insecure mode semantics.                                                // 78
+              // 75
+              var self = this; // 76
+              options = options || {}; // set to true once we call any allow or deny methods. If true, use                        // 77
+              // allow/deny semantics. If false, use insecure mode semantics.                                                     // 80
               //
-              self._restricted = false; // Insecure mode (default to allowing writes). Defaults to 'undefined' which         // 79
-              // means insecure iff the insecure package is loaded. This property can be                                     // 82
-              // overriden by tests or packages wishing to change insecure mode behavior of                                  // 83
-              // their collections.                                                                                          // 84
+              self._restricted = false; // Insecure mode (default to allowing writes). Defaults to 'undefined' which              // 81
+              // means insecure iff the insecure package is loaded. This property can be                                          // 84
+              // overriden by tests or packages wishing to change insecure mode behavior of                                       // 85
+              // their collections.                                                                                               // 86
               //
-              self._insecure = undefined; // 85
-              self._validators = { // 87
-                insert: { // 88
-                  allow: [], // 88
-                  deny: [] // 88
-                }, // 88
-                update: { // 89
-                  allow: [], // 89
-                  deny: [] // 89
-                }, // 89
-                remove: { // 90
+              self._insecure = undefined; // 87
+              self._validators = { // 89
+                insert: { // 90
                   allow: [], // 90
                   deny: [] // 90
                 }, // 90
-                upsert: { // 91
+                update: { // 91
                   allow: [], // 91
                   deny: [] // 91
                 }, // 91
-                // dummy arrays; can't set these!                                                                            // 91
-                fetch: [], // 92
-                fetchAllFields: false // 93
-              }; // 87
-              if (!self._name) return; // anonymous collection                                                               // 96
-              // XXX Think about method namespacing. Maybe methods should be                                                 // 99
-              // "Meteor:Mongo:insert/NAME"?                                                                                 // 100
+                remove: { // 92
+                  allow: [], // 92
+                  deny: [] // 92
+                }, // 92
+                upsert: { // 93
+                  allow: [], // 93
+                  deny: [] // 93
+                }, // 93
+                // dummy arrays; can't set these!                                                                                 // 93
+                fetch: [], // 94
+                fetchAllFields: false // 95
+              }; // 89
+              if (!self._name) return; // anonymous collection                                                                    // 98
+              // XXX Think about method namespacing. Maybe methods should be                                                      // 101
+              // "Meteor:Mongo:insert/NAME"?                                                                                      // 102
               //
-              self._prefix = '/' + self._name + '/'; // Mutation Methods                                                     // 101
-              // Minimongo on the server gets no stubs; instead, by default                                                  // 104
-              // it wait()s until its result is ready, yielding.                                                             // 105
-              // This matches the behavior of macromongo on the server better.                                               // 106
-              // XXX see #MeteorServerNull                                                                                   // 107
+              self._prefix = '/' + self._name + '/'; // Mutation Methods                                                          // 103
+              // Minimongo on the server gets no stubs; instead, by default                                                       // 106
+              // it wait()s until its result is ready, yielding.                                                                  // 107
+              // This matches the behavior of macromongo on the server better.                                                    // 108
+              // XXX see #MeteorServerNull                                                                                        // 109
               //
               if (self._connection && (self._connection === Meteor.server || Meteor.isClient)) {
-                // 108
-                var m = {}; // 109
-                //
-                _.each(['insert', 'update', 'remove'], function (method) {
-                  // 111
-                  var methodName = self._prefix + method; // 112
+                // 110
+                var m = {}; // 111
+                ['insert', 'update', 'remove'].forEach(function (method) {
+                  // 113
+                  var methodName = self._prefix + method; // 114
                   //
                   if (options.useExisting) {
-                    // 114
+                    // 116
                     var handlerPropName = Meteor.isClient ? '_methodHandlers' : 'method_handlers'; // Do not try to create additional methods if this has already been called.
-                    // (Otherwise the .methods() call below will throw an error.)                                            // 117
+                    // (Otherwise the .methods() call below will throw an error.)                                                 // 119
                     //
                     if (self._connection[handlerPropName] && typeof self._connection[handlerPropName][methodName] === 'function') return;
-                  } // 120
+                  } // 122
                   //
                   m[methodName] = function () /* ... */{
-                    // 122
-                    // All the methods do their own validation, instead of using check().                                    // 123
-                    check(arguments, [Match.Any]); // 124
-                    //
-                    var args = _.toArray(arguments); // 125
+                    // 124
+                    // All the methods do their own validation, instead of using check().                                         // 125
+                    check(arguments, [Match.Any]); // 126
+                    var args = Array.from(arguments); // 127
                     //
                     try {
-                      // 126
-                      // For an insert, if the client didn't specify an _id, generate one                                    // 127
-                      // now; because this uses DDP.randomStream, it will be consistent with                                 // 128
-                      // what the client generated. We generate it now rather than later so                                  // 129
-                      // that if (eg) an allow/deny rule does an insert to the same                                          // 130
-                      // collection (not that it really should), the generated _id will                                      // 131
-                      // still be the first use of the stream and will be consistent.                                        // 132
-                      //                                                                                                     // 133
-                      // However, we don't actually stick the _id onto the document yet,                                     // 134
-                      // because we want allow/deny rules to be able to differentiate                                        // 135
-                      // between arbitrary client-specified _id fields and merely                                            // 136
-                      // client-controlled-via-randomSeed fields.                                                            // 137
-                      var generatedId = null; // 138
+                      // 128
+                      // For an insert, if the client didn't specify an _id, generate one                                         // 129
+                      // now; because this uses DDP.randomStream, it will be consistent with                                      // 130
+                      // what the client generated. We generate it now rather than later so                                       // 131
+                      // that if (eg) an allow/deny rule does an insert to the same                                               // 132
+                      // collection (not that it really should), the generated _id will                                           // 133
+                      // still be the first use of the stream and will be consistent.                                             // 134
+                      //                                                                                                          // 135
+                      // However, we don't actually stick the _id onto the document yet,                                          // 136
+                      // because we want allow/deny rules to be able to differentiate                                             // 137
+                      // between arbitrary client-specified _id fields and merely                                                 // 138
+                      // client-controlled-via-randomSeed fields.                                                                 // 139
+                      var generatedId = null; // 140
                       //
-                      if (method === "insert" && !_.has(args[0], '_id')) {
-                        // 139
-                        generatedId = self._makeNewID(); // 140
-                      } // 141
+                      if (method === "insert" && !hasOwn.call(args[0], '_id')) {
+                        // 141
+                        generatedId = self._makeNewID(); // 142
+                      } // 143
                       //
                       if (this.isSimulation) {
-                        // 143
-                        // In a client simulation, you can do any mutation (even with a                                      // 144
-                        // complex selector).                                                                                // 145
-                        if (generatedId !== null) args[0]._id = generatedId; // 146
-                        return self._collection[method].apply(self._collection, args); // 148
-                      } // This is the server receiving a method call from the client.                                       // 150
-                      // We don't allow arbitrary selectors in mutations from the client: only                               // 154
-                      // single-ID selectors.                                                                                // 155
+                        // 145
+                        // In a client simulation, you can do any mutation (even with a                                           // 146
+                        // complex selector).                                                                                     // 147
+                        if (generatedId !== null) args[0]._id = generatedId; // 148
+                        return self._collection[method].apply(self._collection, args); // 150
+                      } // This is the server receiving a method call from the client.                                            // 152
+                      // We don't allow arbitrary selectors in mutations from the client: only                                    // 156
+                      // single-ID selectors.                                                                                     // 157
                       //
                       //
-                      if (method !== 'insert') throwIfSelectorIsNotId(args[0], method); // 156
+                      if (method !== 'insert') throwIfSelectorIsNotId(args[0], method); // 158
                       //
                       if (self._restricted) {
-                        // 159
-                        // short circuit if there is no way it will pass.                                                    // 160
+                        // 161
+                        // short circuit if there is no way it will pass.                                                         // 162
                         if (self._validators[method].allow.length === 0) {
-                          // 161
+                          // 163
                           throw new Meteor.Error(403, "Access denied. No allow validators set on restricted " + "collection for method '" + method + "'.");
-                        } // 165
+                        } // 167
                         //
-                        var validatedMethodName = '_validated' + method.charAt(0).toUpperCase() + method.slice(1); // 167
-                        args.unshift(this.userId); // 169
-                        method === 'insert' && args.push(generatedId); // 170
-                        return self[validatedMethodName].apply(self, args); // 171
+                        var validatedMethodName = '_validated' + method.charAt(0).toUpperCase() + method.slice(1); // 169
+                        args.unshift(this.userId); // 171
+                        method === 'insert' && args.push(generatedId); // 172
+                        return self[validatedMethodName].apply(self, args); // 173
                       } else if (self._isInsecure()) {
-                        // 172
+                        // 174
                         if (generatedId !== null) args[0]._id = generatedId; // In insecure mode, allow any mutation (with a simple selector).
-                        // XXX This is kind of bogus.  Instead of blindly passing whatever                                   // 176
-                        //     we get from the network to this function, we should actually                                  // 177
-                        //     know the correct arguments for the function and pass just                                     // 178
-                        //     them.  For example, if you have an extraneous extra null                                      // 179
-                        //     argument and this is Mongo on the server, the .wrapAsync'd                                    // 180
-                        //     functions like update will get confused and pass the                                          // 181
-                        //     "fut.resolver()" in the wrong slot, where _update will never                                  // 182
-                        //     invoke it. Bam, broken DDP connection.  Probably should just                                  // 183
-                        //     take this whole method and write it three times, invoking                                     // 184
-                        //     helpers for the common code.                                                                  // 185
+                        // XXX This is kind of bogus.  Instead of blindly passing whatever                                        // 178
+                        //     we get from the network to this function, we should actually                                       // 179
+                        //     know the correct arguments for the function and pass just                                          // 180
+                        //     them.  For example, if you have an extraneous extra null                                           // 181
+                        //     argument and this is Mongo on the server, the .wrapAsync'd                                         // 182
+                        //     functions like update will get confused and pass the                                               // 183
+                        //     "fut.resolver()" in the wrong slot, where _update will never                                       // 184
+                        //     invoke it. Bam, broken DDP connection.  Probably should just                                       // 185
+                        //     take this whole method and write it three times, invoking                                          // 186
+                        //     helpers for the common code.                                                                       // 187
                         //
-                        return self._collection[method].apply(self._collection, args); // 186
+                        return self._collection[method].apply(self._collection, args); // 188
                       } else {
-                        // 187
-                        // In secure mode, if we haven't called allow or deny, then nothing                                  // 188
-                        // is permitted.                                                                                     // 189
-                        throw new Meteor.Error(403, "Access denied"); // 190
-                      } // 191
+                        // 189
+                        // In secure mode, if we haven't called allow or deny, then nothing                                       // 190
+                        // is permitted.                                                                                          // 191
+                        throw new Meteor.Error(403, "Access denied"); // 192
+                      } // 193
                     } catch (e) {
-                      // 192
+                      // 194
                       if (e.name === 'MongoError' || e.name === 'MinimongoError') {
-                        // 193
-                        throw new Meteor.Error(409, e.toString()); // 194
-                      } else {
                         // 195
-                        throw e; // 196
-                      } // 197
-                    } // 198
-                  }; // 199
-                }); // 200
+                        throw new Meteor.Error(409, e.toString()); // 196
+                      } else {
+                        // 197
+                        throw e; // 198
+                      } // 199
+                    } // 200
+                  }; // 201
+                }); // 202
                 //
-                self._connection.methods(m); // 202
-              } // 203
-            }; // 204
+                self._connection.methods(m); // 204
+              } // 205
+            }; // 206
             //
             CollectionPrototype._updateFetch = function (fields) {
-              // 206
-              var self = this; // 207
+              // 208
+              var self = this; // 209
               //
               if (!self._validators.fetchAllFields) {
-                // 209
+                // 211
                 if (fields) {
-                  // 210
-                  self._validators.fetch = _.union(self._validators.fetch, fields); // 211
-                } else {
                   // 212
-                  self._validators.fetchAllFields = true; // clear fetch just to make sure we don't accidentally read it     // 213
+                  var union = Object.create(null); // 213
                   //
-                  self._validators.fetch = null; // 215
-                } // 216
-              } // 217
-            }; // 218
+                  var add = function (names) {
+                    // 214
+                    return names && names.forEach(function (name) {
+                      // 214
+                      return union[name] = 1; // 214
+                    }); // 214
+                  }; // 214
+                  //
+                  add(self._validators.fetch); // 215
+                  add(fields); // 216
+                  self._validators.fetch = Object.keys(union); // 217
+                } else {
+                  // 218
+                  self._validators.fetchAllFields = true; // clear fetch just to make sure we don't accidentally read it          // 219
+                  //
+                  self._validators.fetch = null; // 221
+                } // 222
+              } // 223
+            }; // 224
             //
             CollectionPrototype._isInsecure = function () {
-              // 220
-              var self = this; // 221
-              if (self._insecure === undefined) return !!Package.insecure; // 222
-              return self._insecure; // 224
-            }; // 225
+              // 226
+              var self = this; // 227
+              if (self._insecure === undefined) return !!Package.insecure; // 228
+              return self._insecure; // 230
+            }; // 231
             //
             CollectionPrototype._validatedInsert = function (userId, doc, generatedId) {
-              // 227
-              var self = this; // call user validators.                                                                      // 229
-              // Any deny returns true means denied.                                                                         // 232
+              // 233
+              var self = this; // call user validators.                                                                           // 235
+              // Any deny returns true means denied.                                                                              // 238
               //
-              if (_.any(self._validators.insert.deny, function (validator) {
-                // 233
-                return validator(userId, docToValidate(validator, doc, generatedId)); // 234
-              })) {
-                // 235
-                throw new Meteor.Error(403, "Access denied"); // 236
-              } // Any allow returns true means proceed. Throw error if they all fail.                                       // 237
-              //
-              //
-              if (_.all(self._validators.insert.allow, function (validator) {
+              if (self._validators.insert.deny.some(function (validator) {
                 // 239
-                return !validator(userId, docToValidate(validator, doc, generatedId)); // 240
+                return validator(userId, docToValidate(validator, doc, generatedId)); // 240
               })) {
                 // 241
                 throw new Meteor.Error(403, "Access denied"); // 242
-              } // If we generated an ID above, insert it now: after the validation, but                                     // 243
-              // before actually inserting.                                                                                  // 246
+              } // Any allow returns true means proceed. Throw error if they all fail.                                            // 243
               //
               //
-              if (generatedId !== null) doc._id = generatedId; // 247
+              if (self._validators.insert.allow.every(function (validator) {
+                // 245
+                return !validator(userId, docToValidate(validator, doc, generatedId)); // 246
+              })) {
+                // 247
+                throw new Meteor.Error(403, "Access denied"); // 248
+              } // If we generated an ID above, insert it now: after the validation, but                                          // 249
+              // before actually inserting.                                                                                       // 252
               //
-              self._collection.insert.call(self._collection, doc); // 250
-            }; // Simulate a mongo `update` operation while validating that the access                                       // 251
-            // control rules set by calls to `allow/deny` are satisfied. If all                                              // 254
-            // pass, rewrite the mongo operation to use $in to set the list of                                               // 255
-            // document ids to change ##ValidatedChange                                                                      // 256
+              //
+              if (generatedId !== null) doc._id = generatedId; // 253
+              //
+              self._collection.insert.call(self._collection, doc); // 256
+            }; // Simulate a mongo `update` operation while validating that the access                                            // 257
+            // control rules set by calls to `allow/deny` are satisfied. If all                                                   // 260
+            // pass, rewrite the mongo operation to use $in to set the list of                                                    // 261
+            // document ids to change ##ValidatedChange                                                                           // 262
             //
             //
             CollectionPrototype._validatedUpdate = function (userId, selector, mutator, options) {
-              // 257
-              var self = this; // 259
-              check(mutator, Object); // 261
-              options = _.clone(options) || {}; // 263
+              // 263
+              var self = this; // 265
+              check(mutator, Object); // 267
+              options = Object.assign(Object.create(null), options); // 269
               if (!LocalCollection._selectorIsIdPerhapsAsObject(selector)) throw new Error("validated update should be of a single ID"); // We don't support upserts because they don't fit nicely into allow/deny
-              // rules.                                                                                                      // 269
+              // rules.                                                                                                           // 275
               //
               if (options.upsert) throw new Meteor.Error(403, "Access denied. Upserts not " + "allowed in a restricted collection.");
-              var noReplaceError = "Access denied. In a restricted collection you can only" + " update documents, not replace them. Use a Mongo update operator, such " + "as '$set'."; // compute modified fields
+              var noReplaceError = "Access denied. In a restricted collection you can only" + " update documents, not replace them. Use a Mongo update operator, such " + "as '$set'.";
+              var mutatorKeys = Object.keys(mutator); // compute modified fields                                                  // 284
               //
-              var fields = []; // 279
+              var modifiedFields = {}; // 287
               //
-              if (_.isEmpty(mutator)) {
-                // 280
-                throw new Meteor.Error(403, noReplaceError); // 281
-              } // 282
+              if (mutatorKeys.length === 0) {
+                // 289
+                throw new Meteor.Error(403, noReplaceError); // 290
+              } // 291
               //
-              _.each(mutator, function (params, op) {
-                // 283
+              mutatorKeys.forEach(function (op) {
+                // 292
+                var params = mutator[op]; // 293
+                //
                 if (op.charAt(0) !== '$') {
-                  // 284
-                  throw new Meteor.Error(403, noReplaceError); // 285
-                } else if (!_.has(ALLOWED_UPDATE_OPERATIONS, op)) {
-                  // 286
-                  throw new Meteor.Error(403, "Access denied. Operator " + op + " not allowed in a restricted collection.");
+                  // 294
+                  throw new Meteor.Error(403, noReplaceError); // 295
+                } else if (!hasOwn.call(ALLOWED_UPDATE_OPERATIONS, op)) {
+                  // 296
+                  throw new Meteor.Error(403, "Access denied. Operator " + op + " not allowed in a restricted collection."); // 297
                 } else {
-                  // 289
-                  _.each(_.keys(params), function (field) {
-                    // 290
-                    // treat dotted fields as if they are replacing their                                                    // 291
-                    // top-level part                                                                                        // 292
+                  // 299
+                  Object.keys(params).forEach(function (field) {
+                    // 300
+                    // treat dotted fields as if they are replacing their                                                         // 301
+                    // top-level part                                                                                             // 302
                     if (field.indexOf('.') !== -1) field = field.substring(0, field.indexOf('.')); // record the field we are trying to change
                     //
-                    if (!_.contains(fields, field)) fields.push(field); // 297
-                  }); // 299
-                } // 300
-              }); // 301
-              //
-              var findOptions = { // 303
-                transform: null // 303
-              }; // 303
+                    modifiedFields[field] = true; // 307
+                  }); // 308
+                } // 309
+              }); // 310
+              var fields = Object.keys(modifiedFields); // 312
+              var findOptions = { // 314
+                transform: null // 314
+              }; // 314
               //
               if (!self._validators.fetchAllFields) {
-                // 304
-                findOptions.fields = {}; // 305
+                // 315
+                findOptions.fields = {}; // 316
                 //
-                _.each(self._validators.fetch, function (fieldName) {
-                  // 306
-                  findOptions.fields[fieldName] = 1; // 307
-                }); // 308
-              } // 309
+                self._validators.fetch.forEach(function (fieldName) {
+                  // 317
+                  findOptions.fields[fieldName] = 1; // 318
+                }); // 319
+              } // 320
               //
-              var doc = self._collection.findOne(selector, findOptions); // 311
+              var doc = self._collection.findOne(selector, findOptions); // 322
               //
-              if (!doc) // none satisfied!                                                                                   // 312
-                return 0; // call user validators.                                                                           // 313
-              // Any deny returns true means denied.                                                                         // 316
+              if (!doc) // none satisfied!                                                                                        // 323
+                return 0; // call user validators.                                                                                // 324
+              // Any deny returns true means denied.                                                                              // 327
               //
-              if (_.any(self._validators.update.deny, function (validator) {
-                // 317
-                var factoriedDoc = transformDoc(validator, doc); // 318
-                return validator(userId, factoriedDoc, fields, mutator); // 319
+              if (self._validators.update.deny.some(function (validator) {
+                // 328
+                var factoriedDoc = transformDoc(validator, doc); // 329
+                return validator(userId, factoriedDoc, fields, mutator); // 330
               })) {
-                // 323
-                throw new Meteor.Error(403, "Access denied"); // 324
-              } // Any allow returns true means proceed. Throw error if they all fail.                                       // 325
+                // 334
+                throw new Meteor.Error(403, "Access denied"); // 335
+              } // Any allow returns true means proceed. Throw error if they all fail.                                            // 336
               //
               //
-              if (_.all(self._validators.update.allow, function (validator) {
-                // 327
-                var factoriedDoc = transformDoc(validator, doc); // 328
-                return !validator(userId, factoriedDoc, fields, mutator); // 329
+              if (self._validators.update.allow.every(function (validator) {
+                // 338
+                var factoriedDoc = transformDoc(validator, doc); // 339
+                return !validator(userId, factoriedDoc, fields, mutator); // 340
               })) {
-                // 333
-                throw new Meteor.Error(403, "Access denied"); // 334
-              } // 335
+                // 344
+                throw new Meteor.Error(403, "Access denied"); // 345
+              } // 346
               //
-              options._forbidReplace = true; // Back when we supported arbitrary client-provided selectors, we actually      // 337
-              // rewrote the selector to include an _id clause before passing to Mongo to                                    // 340
-              // avoid races, but since selector is guaranteed to already just be an ID, we                                  // 341
-              // don't have to any more.                                                                                     // 342
+              options._forbidReplace = true; // Back when we supported arbitrary client-provided selectors, we actually           // 348
+              // rewrote the selector to include an _id clause before passing to Mongo to                                         // 351
+              // avoid races, but since selector is guaranteed to already just be an ID, we                                       // 352
+              // don't have to any more.                                                                                          // 353
               //
-              return self._collection.update.call(self._collection, selector, mutator, options); // 344
-            }; // Only allow these operations in validated updates. Specifically                                             // 346
-            // whitelist operations, rather than blacklist, so new complex                                                   // 349
-            // operations that are added aren't automatically allowed. A complex                                             // 350
-            // operation is one that does more than just modify its target                                                   // 351
-            // field. For now this contains all update operations except '$rename'.                                          // 352
-            // http://docs.mongodb.org/manual/reference/operators/#update                                                    // 353
+              return self._collection.update.call(self._collection, selector, mutator, options); // 355
+            }; // Only allow these operations in validated updates. Specifically                                                  // 357
+            // whitelist operations, rather than blacklist, so new complex                                                        // 360
+            // operations that are added aren't automatically allowed. A complex                                                  // 361
+            // operation is one that does more than just modify its target                                                        // 362
+            // field. For now this contains all update operations except '$rename'.                                               // 363
+            // http://docs.mongodb.org/manual/reference/operators/#update                                                         // 364
             //
             //
-            var ALLOWED_UPDATE_OPERATIONS = { // 354
-              $inc: 1, // 355
-              $set: 1, // 355
-              $unset: 1, // 355
-              $addToSet: 1, // 355
-              $pop: 1, // 355
-              $pullAll: 1, // 355
-              $pull: 1, // 355
-              $pushAll: 1, // 356
-              $push: 1, // 356
-              $bit: 1 // 356
-            }; // Simulate a mongo `remove` operation while validating access control                                        // 354
-            // rules. See #ValidatedChange                                                                                   // 360
+            var ALLOWED_UPDATE_OPERATIONS = { // 365
+              $inc: 1, // 366
+              $set: 1, // 366
+              $unset: 1, // 366
+              $addToSet: 1, // 366
+              $pop: 1, // 366
+              $pullAll: 1, // 366
+              $pull: 1, // 366
+              $pushAll: 1, // 367
+              $push: 1, // 367
+              $bit: 1 // 367
+            }; // Simulate a mongo `remove` operation while validating access control                                             // 365
+            // rules. See #ValidatedChange                                                                                        // 371
             //
             CollectionPrototype._validatedRemove = function (userId, selector) {
-              // 361
-              var self = this; // 362
-              var findOptions = { // 364
-                transform: null // 364
-              }; // 364
+              // 372
+              var self = this; // 373
+              var findOptions = { // 375
+                transform: null // 375
+              }; // 375
               //
               if (!self._validators.fetchAllFields) {
-                // 365
-                findOptions.fields = {}; // 366
+                // 376
+                findOptions.fields = {}; // 377
                 //
-                _.each(self._validators.fetch, function (fieldName) {
-                  // 367
-                  findOptions.fields[fieldName] = 1; // 368
-                }); // 369
-              } // 370
+                self._validators.fetch.forEach(function (fieldName) {
+                  // 378
+                  findOptions.fields[fieldName] = 1; // 379
+                }); // 380
+              } // 381
               //
-              var doc = self._collection.findOne(selector, findOptions); // 372
+              var doc = self._collection.findOne(selector, findOptions); // 383
               //
-              if (!doc) return 0; // call user validators.                                                                   // 373
-              // Any deny returns true means denied.                                                                         // 377
+              if (!doc) return 0; // call user validators.                                                                        // 384
+              // Any deny returns true means denied.                                                                              // 388
               //
-              if (_.any(self._validators.remove.deny, function (validator) {
-                // 378
-                return validator(userId, transformDoc(validator, doc)); // 379
+              if (self._validators.remove.deny.some(function (validator) {
+                // 389
+                return validator(userId, transformDoc(validator, doc)); // 390
               })) {
-                // 380
-                throw new Meteor.Error(403, "Access denied"); // 381
-              } // Any allow returns true means proceed. Throw error if they all fail.                                       // 382
+                // 391
+                throw new Meteor.Error(403, "Access denied"); // 392
+              } // Any allow returns true means proceed. Throw error if they all fail.                                            // 393
               //
               //
-              if (_.all(self._validators.remove.allow, function (validator) {
-                // 384
-                return !validator(userId, transformDoc(validator, doc)); // 385
+              if (self._validators.remove.allow.every(function (validator) {
+                // 395
+                return !validator(userId, transformDoc(validator, doc)); // 396
               })) {
-                // 386
-                throw new Meteor.Error(403, "Access denied"); // 387
-              } // Back when we supported arbitrary client-provided selectors, we actually                                   // 388
-              // rewrote the selector to {_id: {$in: [ids that we found]}} before passing to                                 // 391
-              // Mongo to avoid races, but since selector is guaranteed to already just be                                   // 392
-              // an ID, we don't have to any more.                                                                           // 393
+                // 397
+                throw new Meteor.Error(403, "Access denied"); // 398
+              } // Back when we supported arbitrary client-provided selectors, we actually                                        // 399
+              // rewrote the selector to {_id: {$in: [ids that we found]}} before passing to                                      // 402
+              // Mongo to avoid races, but since selector is guaranteed to already just be                                        // 403
+              // an ID, we don't have to any more.                                                                                // 404
               //
               //
-              return self._collection.remove.call(self._collection, selector); // 395
-            }; // 396
+              return self._collection.remove.call(self._collection, selector); // 406
+            }; // 407
             //
             CollectionPrototype._callMutatorMethod = function () {
-              // 398
+              // 409
               function _callMutatorMethod(name, args, callback) {
-                // 398
+                // 409
                 if (Meteor.isClient && !callback && !alreadyInSimulation()) {
-                  // 399
-                  // Client can't block, so it can't report errors by exception,                                             // 400
-                  // only by callback. If they forget the callback, give them a                                              // 401
-                  // default one that logs the error, so they aren't totally                                                 // 402
-                  // baffled if their writes don't work because their database is                                            // 403
-                  // down.                                                                                                   // 404
-                  // Don't give a default callback in simulation, because inside stubs we                                    // 405
-                  // want to return the results from the local collection immediately and                                    // 406
-                  // not force a callback.                                                                                   // 407
+                  // 410
+                  // Client can't block, so it can't report errors by exception,                                                  // 411
+                  // only by callback. If they forget the callback, give them a                                                   // 412
+                  // default one that logs the error, so they aren't totally                                                      // 413
+                  // baffled if their writes don't work because their database is                                                 // 414
+                  // down.                                                                                                        // 415
+                  // Don't give a default callback in simulation, because inside stubs we                                         // 416
+                  // want to return the results from the local collection immediately and                                         // 417
+                  // not force a callback.                                                                                        // 418
                   callback = function (err) {
-                    // 408
-                    if (err) Meteor._debug(name + " failed: " + (err.reason || err.stack)); // 409
-                  }; // 411
-                } // For two out of three mutator methods, the first argument is a selector                                  // 412
+                    // 419
+                    if (err) Meteor._debug(name + " failed: " + (err.reason || err.stack)); // 420
+                  }; // 422
+                } // For two out of three mutator methods, the first argument is a selector                                       // 423
                 //
                 //
-                var firstArgIsSelector = name === "update" || name === "remove"; // 415
+                var firstArgIsSelector = name === "update" || name === "remove"; // 426
                 //
                 if (firstArgIsSelector && !alreadyInSimulation()) {
-                  // 416
-                  // If we're about to actually send an RPC, we should throw an error if                                     // 417
-                  // this is a non-ID selector, because the mutation methods only allow                                      // 418
-                  // single-ID selectors. (If we don't throw here, we'll see flicker.)                                       // 419
-                  throwIfSelectorIsNotId(args[0], name); // 420
-                } // 421
+                  // 427
+                  // If we're about to actually send an RPC, we should throw an error if                                          // 428
+                  // this is a non-ID selector, because the mutation methods only allow                                           // 429
+                  // single-ID selectors. (If we don't throw here, we'll see flicker.)                                            // 430
+                  throwIfSelectorIsNotId(args[0], name); // 431
+                } // 432
                 //
-                var mutatorMethodName = this._prefix + name; // 423
-                return this._connection.apply(mutatorMethodName, args, { // 424
-                  returnStubValue: true // 425
-                }, callback); // 425
-              } // 426
+                var mutatorMethodName = this._prefix + name; // 434
+                return this._connection.apply(mutatorMethodName, args, { // 435
+                  returnStubValue: true // 436
+                }, callback); // 436
+              } // 437
               //
-              return _callMutatorMethod; // 398
-            }(); // 398
+              return _callMutatorMethod; // 409
+            }(); // 409
             //
             function transformDoc(validator, doc) {
-              // 428
-              if (validator.transform) return validator.transform(doc); // 429
-              return doc; // 431
-            } // 432
+              // 439
+              if (validator.transform) return validator.transform(doc); // 440
+              return doc; // 442
+            } // 443
             //
             function docToValidate(validator, doc, generatedId) {
-              // 434
-              var ret = doc; // 435
+              // 445
+              var ret = doc; // 446
               //
               if (validator.transform) {
-                // 436
-                ret = EJSON.clone(doc); // If you set a server-side transform on your collection, then you don't get         // 437
-                // to tell the difference between "client specified the ID" and "server                                      // 439
-                // generated the ID", because transforms expect to get _id.  If you want to                                  // 440
-                // do that check, you can do it with a specific                                                              // 441
-                // `C.allow({insert: f, transform: null})` validator.                                                        // 442
+                // 447
+                ret = EJSON.clone(doc); // If you set a server-side transform on your collection, then you don't get              // 448
+                // to tell the difference between "client specified the ID" and "server                                           // 450
+                // generated the ID", because transforms expect to get _id.  If you want to                                       // 451
+                // do that check, you can do it with a specific                                                                   // 452
+                // `C.allow({insert: f, transform: null})` validator.                                                             // 453
                 //
                 if (generatedId !== null) {
-                  // 443
-                  ret._id = generatedId; // 444
-                } // 445
+                  // 454
+                  ret._id = generatedId; // 455
+                } // 456
                 //
-                ret = validator.transform(ret); // 446
-              } // 447
+                ret = validator.transform(ret); // 457
+              } // 458
               //
-              return ret; // 448
-            } // 449
+              return ret; // 459
+            } // 460
             //
             function addValidator(collection, allowOrDeny, options) {
-              // 451
-              // validate keys                                                                                               // 452
-              var VALID_KEYS = ['insert', 'update', 'remove', 'fetch', 'transform']; // 453
-              //
-              _.each(_.keys(options), function (key) {
-                // 454
-                if (!_.contains(VALID_KEYS, key)) throw new Error(allowOrDeny + ": Invalid key: " + key); // 455
-              }); // 457
-              //
-              collection._restricted = true; // 459
-              //
-              _.each(['insert', 'update', 'remove'], function (name) {
-                // 461
-                if (options.hasOwnProperty(name)) {
-                  // 462
+              // 462
+              // validate keys                                                                                                    // 463
+              var validKeysRegEx = /^(?:insert|update|remove|fetch|transform)$/; // 464
+              Object.keys(options).forEach(function (key) {
+                // 465
+                if (!validKeysRegEx.test(key)) throw new Error(allowOrDeny + ": Invalid key: " + key); // 466
+              }); // 468
+              collection._restricted = true; // 470
+              ['insert', 'update', 'remove'].forEach(function (name) {
+                // 472
+                if (hasOwn.call(options, name)) {
+                  // 473
                   if (!(options[name] instanceof Function)) {
-                    // 463
-                    throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function"); // 464
-                  } // If the transform is specified at all (including as 'null') in this                                    // 465
-                  // call, then take that; otherwise, take the transform from the                                            // 468
-                  // collection.                                                                                             // 469
+                    // 474
+                    throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function"); // 475
+                  } // If the transform is specified at all (including as 'null') in this                                         // 476
+                  // call, then take that; otherwise, take the transform from the                                                 // 479
+                  // collection.                                                                                                  // 480
                   //
                   //
                   if (options.transform === undefined) {
-                    // 470
-                    options[name].transform = collection._transform; // already wrapped                                      // 471
+                    // 481
+                    options[name].transform = collection._transform; // already wrapped                                           // 482
                   } else {
-                    // 472
-                    options[name].transform = LocalCollection.wrapTransform(options.transform); // 473
-                  } // 475
+                    // 483
+                    options[name].transform = LocalCollection.wrapTransform(options.transform); // 484
+                  } // 486
                   //
-                  collection._validators[name][allowOrDeny].push(options[name]); // 477
-                } // 478
-              }); // Only update the fetch fields if we're passed things that affect                                         // 479
-              // fetching. This way allow({}) and allow({insert: f}) don't result in                                         // 482
-              // setting fetchAllFields                                                                                      // 483
-              //
+                  collection._validators[name][allowOrDeny].push(options[name]); // 488
+                } // 489
+              }); // Only update the fetch fields if we're passed things that affect                                              // 490
+              // fetching. This way allow({}) and allow({insert: f}) don't result in                                              // 493
+              // setting fetchAllFields                                                                                           // 494
               //
               if (options.update || options.remove || options.fetch) {
-                // 484
+                // 495
                 if (options.fetch && !(options.fetch instanceof Array)) {
-                  // 485
-                  throw new Error(allowOrDeny + ": Value for `fetch` must be an array"); // 486
-                } // 487
+                  // 496
+                  throw new Error(allowOrDeny + ": Value for `fetch` must be an array"); // 497
+                } // 498
                 //
-                collection._updateFetch(options.fetch); // 488
-              } // 489
-            } // 490
+                collection._updateFetch(options.fetch); // 499
+              } // 500
+            } // 501
             //
             function throwIfSelectorIsNotId(selector, methodName) {
-              // 492
+              // 503
               if (!LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
-                // 493
-                throw new Meteor.Error(403, "Not permitted. Untrusted code may only " + methodName + " documents by ID."); // 494
-              } // 497
-            } // 498
+                // 504
+                throw new Meteor.Error(403, "Not permitted. Untrusted code may only " + methodName + " documents by ID."); // 505
+              } // 508
+            } // 509
             //
-            ; // Determine if we are in a DDP method simulation                                                              // 498
+            ; // Determine if we are in a DDP method simulation                                                                   // 509
             //
             function alreadyInSimulation() {
-              // 501
-              var enclosing = DDP._CurrentMethodInvocation.get(); // 502
-              //
-              return enclosing && enclosing.isSimulation; // 503
-            } // 504
-            ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+              // 512
+              var CurrentInvocation = DDP._CurrentMethodInvocation || // For backwards compatibility, as explained in this issue:
+              // https://github.com/meteor/meteor/issues/8947                                                                     // 516
+              DDP._CurrentInvocation; // 517
+              var enclosing = CurrentInvocation.get(); // 519
+              return enclosing && enclosing.isSimulation; // 520
+            } // 521
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
           } } } } }, {
     "extensions": [".js", ".json"]
   });

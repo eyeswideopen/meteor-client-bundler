@@ -2677,8 +2677,8 @@ __meteor_runtime_config__ = {
           '>': '&gt;', // 1111
           '"': '&quot;', // 1112
           "'": '&#x27;' // 1113
-        } // 1114
-      }; // 1115
+          // 1114
+        } }; // 1115
       entityMap.unescape = _.invert(entityMap.escape); // 1116
       // 1117
       // Regexes containing the keys and values listed immediately above.                                    // 1118
@@ -3741,8 +3741,8 @@ __meteor_runtime_config__ = {
               meteorInstall({ // 22
                 node_modules: { // 23
                   meteor: meteorDir // 24
-                } // 25
-              }); // 26
+                  // 25
+                } }); // 26
             } // 27
             // 28
             // This file will be modified during computeJsOutputFilesMap to include                                                // 29
@@ -3818,8 +3818,8 @@ __meteor_runtime_config__ = {
                     // 17
                     _module4.exports = proc; // 18
                   } // 19
-                } // 20
-              }); // 21
+                  // 20
+                } }); // 21
             } else {
               // 22
               proc.platform = "browser"; // 23
@@ -4737,8 +4737,8 @@ __meteor_runtime_config__ = {
               // available to apps and packages.                                                                                 // 21
               "..": { // 22
                 node_modules: meteorAliases // 23
-              } // 24
-            }); // 25
+                // 24
+              } }); // 25
           } // 26
           // 27
           /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -5633,8 +5633,8 @@ __meteor_runtime_config__ = {
                   enumerable: false, // 27
                   writable: true, // 28
                   configurable: true // 29
-                } // 30
-              }); // 31
+                  // 30
+                } }); // 31
               if (superClass) _setPrototypeOf2.default ? (0, _setPrototypeOf2.default)(subClass, superClass) : subClass.__proto__ = superClass;
             }; // 33
             /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -15363,7 +15363,7 @@ __meteor_runtime_config__ = {
 
                 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                 //                                                                                                                  //
-                // ../../.0.10.0-beta.26.9jyc6q.ftfvk++os+web.browser+web.cordova/npm/node_modules/meteor-promise/package.json      //
+                // ../../.0.10.0-beta.26.17k9vz5.zk3r++os+web.browser+web.cordova/npm/node_modules/meteor-promise/package.json      //
                 //                                                                                                                  //
                 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
                 //
@@ -16006,7 +16006,7 @@ __meteor_runtime_config__ = {
 
                 ////////////////////////////////////////////////////////////////////////////////
                 //                                                                            //
-                // ../../.1.1.0-beta.26.t1ti2l.blrrh++os+web.browser+web.cordova/npm/node_mod //
+                // ../../.1.1.0-beta.26.zpn21v.4rgu++os+web.browser+web.cordova/npm/node_modu //
                 //                                                                            //
                 ////////////////////////////////////////////////////////////////////////////////
                 //
@@ -27103,8 +27103,8 @@ __meteor_runtime_config__ = {
             } // 56
             // 57
             var objectStoreMap = { // 58
-              sourcesByVersion: { keyPath: "version" } // 59
-            }; // 60
+              sourcesByVersion: { keyPath: "version" // 59
+              } }; // 60
             // 61
             function makeOnError(reject, source) {
               // 62
@@ -27655,7 +27655,8 @@ __meteor_runtime_config__ = {
                   return { // 254
                     lng: o.coordinates[0], // 255
                     lat: o.coordinates[1] // 256
-                  }; // 257
+                    // 257
+                  };
                 }); // 258
                 // 259
                 var n_source, n_stack, n_dest, start, end, i, sig; // 260
@@ -27762,7 +27763,8 @@ __meteor_runtime_config__ = {
                   return { // 353
                     type: "Point", // 354
                     coordinates: [o.lng, o.lat] // 355
-                  }; // 356
+                    // 356
+                  };
                 }); // 357
               }; // 358
               // 359
@@ -28496,8 +28498,8 @@ __meteor_runtime_config__ = {
                     return false; // 216
                   }; // 217
                 } // 218
-              } // 164
-            }; // 17
+                // 164
+              } }; // 17
             // Operators that appear at the top level of a document selector.                                                      // 222
             var LOGICAL_OPERATORS = { // 223
               $and: function (subSelector, matcher, inElemMatch) {
@@ -32553,9 +32555,9 @@ __meteor_runtime_config__ = {
                       // 1711
                       return LocalCollection._f._equal(value, element); // 1711
                     })) {
-                        // 1711
-                        return; // 1712
-                      } // 1713
+                      // 1711
+                      return; // 1712
+                    } // 1713
                     //
                     toAdd.push(value); // 1715
                   }); // 1716

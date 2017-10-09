@@ -5,6 +5,6 @@
     "DDP_DEFAULT_CONNECTION_URL": "http://localhost:3000"
   },
   "import": [
-    "meteor-base"
+    "meteor-base@=1.1.0"
   ]
 }
